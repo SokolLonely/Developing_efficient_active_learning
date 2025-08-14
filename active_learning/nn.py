@@ -23,12 +23,12 @@ from tqdm.auto import trange
 #from sklearn.ensemble import RandomForestClassifier
 #import datamol as dm
 #from active_learning.hyperopt import optimize_hyperparameters
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
+#from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from sklearn.metrics import accuracy_score
-from transformers import DataCollatorWithPadding
+#from transformers import DataCollatorWithPadding
 import pandas as pd
-class NewMLP(torch.nn.Module): #4 layers, 2 times bigger, gelu
-    def __init__(self, in_feats: int = 1024, n_hidden: int = 1024, n_out: int = 2, n_layers: int = 4, seed: int = 42,
+class AttMLP(torch.nn.Module): #attention on representation
+    def __init__(self, in_feats: int = 1024, n_hidden: int = 1024, n_out: int = 2, n_layers: int = 3, seed: int = 42,
                  lr: float = 3e-4, epochs: int = 50, anchored: bool = True, l2_lambda: float = 3e-4,
                  weight_decay: float = 0):
         super().__init__()
@@ -38,6 +38,7 @@ class NewMLP(torch.nn.Module): #4 layers, 2 times bigger, gelu
 
         self.fc = torch.nn.ModuleList()
         self.fc_norms = torch.nn.ModuleList()
+        self.fc.append(torch.nn.MultiheadAttention(embed_dim=in_feats, num_heads=8, batch_first=True))
         for i in range(n_layers):
             self.fc.append(torch.nn.Linear(in_feats if i == 0 else n_hidden, n_hidden))
             self.fc_norms.append(BatchNorm(n_hidden, allow_single_element=True))
@@ -50,6 +51,8 @@ class NewMLP(torch.nn.Module): #4 layers, 2 times bigger, gelu
         self.out.reset_parameters()
 
     def forward(self, x: Tensor) -> Tensor:
+        attn = self.fc[0]
+        x, _ = attn(x, x, x)
         for lin, norm in zip(self.fc, self.fc_norms):
             x = lin(x)
             x = norm(x)
@@ -340,17 +343,17 @@ class EarlyStopping:
         if val_loss < self.best_loss - self.min_delta:
             self.best_loss = val_loss
             self.counter = 0
-            print(f'best loss= {self.best_loss}')
+            #print(f'best loss= {self.best_loss}')
         else:
             self.counter += 1
-            print(f"{val_loss}> {self.best_loss - self.min_delta}")
+            #print(f"{val_loss}> {self.best_loss - self.min_delta}")
             if self.counter >= self.patience:
                 self.early_stop = True
-from transformers import TrainingArguments, Trainer
+#from transformers import TrainingArguments, Trainer
 class Model(torch.nn.Module):
     def __init__(self, architecture: str,n_layers=3, function = 'relu', epochs = 50, **kwargs):
         super().__init__()
-        assert architecture in ['gcn', 'mlp', 'gat', 'gin', 'newmlp', 'chembert', 'morfeus_mlp']
+        #assert architecture in ['gcn', 'mlp', 'gat', 'gin', 'newmlp', 'chembert', 'morfeus_mlp']
         self.architecture = architecture
         if architecture == 'mlp':
             self.model = MLP(n_layers = n_layers, function = function, epochs = epochs, **kwargs)
@@ -358,31 +361,31 @@ class Model(torch.nn.Module):
             self.model = GCN( **kwargs)
         elif architecture == 'gin':
             self.model = GIN(**kwargs)
-        elif architecture == 'newmlp':
-            self.model = NewMLP(**kwargs)
+ #       elif architecture == 'newmlp':
+#            self.model = NewMLP(**kwargs)
+        elif achitecture == 'mm':
+            self.model = AttMLP(n_layers = n_layers, n_hidden= 1024, function = function, epochs = epochs, in_feats = 1192, **kwargs)
         elif architecture == 'chembert':
             self.model =Chemberta(**kwargs)
+            self.training_args = TrainingArguments(
+            output_dir="./chemberta-finetuned",
+            eval_strategy="epoch",
+            save_strategy="epoch",
+            logging_strategy="epoch",
+            learning_rate=2e-5,
+            per_device_train_batch_size=16,
+            per_device_eval_batch_size=16,
+            num_train_epochs=epochs,
+            weight_decay=self.model.weight_decay,
+            load_best_model_at_end = True,
+        #compute_metrics=compute_metrics,
+            metric_for_best_model="accuracy",
+            report_to="none",
+            )
         elif architecture == 'morfeus_mlp':
              self.model = MLP(n_layers = n_layers, function = function, epochs = epochs, in_feats = 1031, **kwargs)
         else:
             self.model = GAT(**kwargs)
-
-        #only for chemberta
-        self.training_args = TrainingArguments(
-        output_dir="./chemberta-finetuned",
-        eval_strategy="epoch",
-        save_strategy="epoch",
-        logging_strategy="epoch",
-        learning_rate=2e-5,
-        per_device_train_batch_size=16,
-        per_device_eval_batch_size=16,
-        num_train_epochs=epochs,
-        weight_decay=self.model.weight_decay,
-        load_best_model_at_end = True,
-        #compute_metrics=compute_metrics,
-        metric_for_best_model="accuracy",
-        report_to="none",
-        )
 
         self.device_type = "cuda" if torch.cuda.is_available() else "cpu"
         self.device = torch.device(self.device_type)
@@ -404,14 +407,14 @@ class Model(torch.nn.Module):
       if self.architecture != 'chembert':
         bar = trange(self.epochs if epochs is None else epochs, disable=not verbose)
         scaler = torch.cuda.amp.GradScaler()
-        print()
+        #print()
         from torch.optim.lr_scheduler import ReduceLROnPlateau
-        #scheduler = ReduceLROnPlateau(self.optimizer, mode='min', patience=3, factor=0.5)
+        scheduler = ReduceLROnPlateau(self.optimizer, mode='min', patience=3, factor=0.5)
         early_stopping = EarlyStopping(patience=6, min_delta=0)
         for i in bar:#epoch loop 
             running_loss = 0
             items = 0
-            print(i, end = ' ')
+            #print(i, end = ' ')
             for idx, batch in enumerate(dataloader):
 
                 self.optimizer.zero_grad()
@@ -442,12 +445,12 @@ class Model(torch.nn.Module):
                         # Add anchored loss to regular loss according to Pearce et al. (2018)
                         loss = loss + l2_loss
 
-                    #scaler.scale(loss).backward()
+                    scaler.scale(loss).backward()
                     # loss.backward()
-                    #scaler.step(self.optimizer)
+                    scaler.step(self.optimizer)
                     # self.optimizer.step()
-                    #scaler.update()
-                    #scheduler.step(loss)
+                    scaler.update()
+                    scheduler.step(loss)
                     running_loss += loss.item()
                     items += len(y)
 
@@ -457,7 +460,7 @@ class Model(torch.nn.Module):
             self.epoch += 1
             early_stopping(epoch_loss)
             if early_stopping.early_stop:
-               print("Early stopping triggered")
+               #print("Early stopping triggered")
                break
         
       else:
@@ -472,9 +475,9 @@ class Model(torch.nn.Module):
                 data_collator=self.model.data_collator,
     #compute_metrics=compute_metrics
                     )
-            print(type(dataloader))
+            #print(type(dataloader))
             trainer.train()
-      print('train function finished')
+      #print('train function finished')
     def predict(self, dataloader: DataLoader, architecture) -> Tensor:
       """ Predict
         :param dataloader: Torch geometric data loader with data

@@ -1,7 +1,3 @@
-# import morfeus
-# print(dir(morfeus))
-# from morfeus import *
-from morfeus import read_xyz, SASA, BuriedVolume, Sterimol, Dispersion
 from typing import Union, Optional
 import pandas as pd
 import numpy as np
@@ -434,7 +430,7 @@ def smiles_to_acsf(smiles: list[str],species=["H", "O","C", "N", "S", "Cl", "Br"
 
     return output
 
-def smiles_to_ecfp(smiles: list[str], radius: int = 2, nbits: int = 1024, silent: bool = True, to_array: bool = True) \
+def smiles_to_ecfp(smiles: list[str], radius: int = 3, nbits: int = 1024, silent: bool = True, to_array: bool = True) \
         -> np.ndarray:
     """ Get a Numpy array of ECFPs from a list of SMILES strings """
     from rdkit.Chem.AllChem import GetMorganFingerprintAsBitVect
@@ -463,7 +459,7 @@ def smiles_to_morfeus(smiles: list[str], silent: bool = True, to_array: bool = T
         smiles = [smiles]
     output = []
     for string in tqdm(smiles, disable=silent):
-        new_path = os.path.join( path, f"{string.replace("/", "").replace("\\", "")}.xyz")
+       # new_path = os.path.join(path, f"{string.replace('/', '').replace('\\', '')}.xyz")
         smiles_to_xyz(string, filename = new_path)
         temp = compute_morfeus_descriptors(new_path, filename = new_path)
         output.append(temp)

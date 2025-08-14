@@ -51,6 +51,8 @@ def active_learning(n_start: int = 64, acquisition_method: str = 'exploration', 
         ensemble_size = 1  
     elif architecture in ['morfeus_mlp']:
         representation = 'morfeus'
+    elif architecture in ['mm']:
+        representation = 'mm'
     else:
         representation = 'graph'
     ds_screen = MasterDataset('screen', representation=representation, dataset=dataset, scramble_x=scrambledx,
@@ -80,7 +82,7 @@ def active_learning(n_start: int = 64, acquisition_method: str = 'exploration', 
 
     # While max_screen_size has not been achieved, do some active learning in cycles
     for cycle in range(n_cycles+1): 
-        print(f"cycle: {cycle}")
+        #print(f"cycle: {cycle}")
         # Get the train and screen data for this cycle
         train_idx, screen_idx = handler()
         #print(train_idx)
@@ -122,7 +124,7 @@ def active_learning(n_start: int = 64, acquisition_method: str = 'exploration', 
                                                 shuffle=False, pin_memory=True, architecture=architecture)
             #print(data)
             # Initiate and train the model (optimize if specified)
-            print("Training model")
+            #print("Training model")
             if retrain or cycle == 0:
                 M = Ensemble(seed=seed, ensemble_size=ensemble_size,epochs = epochs, architecture=architecture,n_layers=n_layers, function = function, anchored=anchored)
                 if cycle == 0 and optimize_hyperparameters:
@@ -130,7 +132,7 @@ def active_learning(n_start: int = 64, acquisition_method: str = 'exploration', 
                 M.train(train_loader_balanced, verbose=False)
 
             # Do inference of the train/test/screen data
-            print("Train/test/screen inference")
+            #print("Train/test/screen inference")
             train_logits_N_K_C = M.predict(train_loader, architecture)
             eval_train.eval(train_logits_N_K_C, y_train, architecture)
 
@@ -177,9 +179,9 @@ def active_learning(n_start: int = 64, acquisition_method: str = 'exploration', 
             batch_size = max_screen_size - len(train_idx)
 
         # Select the molecules to add for the next cycle
-        print("Sample acquisition")
+        #print("Sample acquisition")
         picks = ACQ.acquire(screen_logits_N_K_C, smiles_screen, hits=hits, n=batch_size)
-        print(f"Picked {len(picks)} molecules (batch size = {batch_size})") # for some reason returns only one molecule, instead of 64
+        #print(f"Picked {len(picks)} molecules (batch size = {batch_size})") # for some reason returns only one molecule, instead of 64
         #print(picks)
         #print(type(picks))
         handler.add(picks)

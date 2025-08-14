@@ -5,8 +5,8 @@ import os
 from collections import OrderedDict
 import pandas as pd
 import numpy as np
-from rdkit import Chem
-from rdkit.Chem.Scaffolds import MurckoScaffold
+#from rdkit import Chem
+#from rdkit.Chem.Scaffolds import MurckoScaffold
 from tqdm import tqdm
 import torch
 import h5py
@@ -61,7 +61,7 @@ def get_data(random_state: int = 42, dataset: str = 'ALDH1'):
 
     # shuffle
     df = df.sample(frac=1, random_state=random_state).reset_index(drop=True)
-    print('get_data complete')
+    #print('get_data complete')
     return df
 
 
@@ -75,7 +75,7 @@ def split_data(df: pd.DataFrame, random_state: int = 42, screen_size: int = 5000
     # write to csv
     df_screen.to_csv(os.path.join(ROOT_DIR, f'data/{dataset}/original/screen.csv'), index=False)
     df_test.to_csv(os.path.join(ROOT_DIR, f'data/{dataset}/original/test.csv'), index=False)
-    print('split_data complete')
+    #print('split_data complete')
     return df_screen, df_test
 
 
@@ -84,7 +84,7 @@ class MasterDataset:
     def __init__(self, name: str, df: pd.DataFrame = None, dataset: str = 'ALDH1', representation: str = 'ecfp', root: str = 'data',
                  overwrite: bool = False, scramble_x: bool = False, scramble_x_seed: int = 1) -> None:
 
-        assert representation in ['ecfp', 'graph', 'smiles', 'morfeus'], f"'representation' must be 'ecfp' or 'graph', not {representation}"
+       # assert representation in ['ecfp', 'graph', 'smiles', 'morfeus'], f"'representation' must be 'ecfp' or 'graph', not {representation}"
         self.representation = representation
         self.pth = os.path.join(ROOT_DIR, root, dataset, name)
         print(self.pth)
@@ -101,7 +101,7 @@ class MasterDataset:
                 self.x = scramble_features(self.x, seed=scramble_x_seed)
             if representation == 'graph':
                 self.graphs = scramble_graphs(self.graphs, seed=scramble_x_seed)
-        print('init done')
+        #print('init done')
 
 
 
@@ -114,7 +114,7 @@ class MasterDataset:
         smiles = np.array(df.smiles.tolist())
         x = smiles_to_ecfp(smiles, silent=False)
         y = torch.tensor(df.y.tolist())
-        x_morfeus = smiles_to_morfeus(smiles, silent=False, path = self.pth)
+        #x_morfeus = smiles_to_morfeus(smiles, silent=False, path = self.pth)
         # print('new part started') 
         # x_soap = smiles_to_soap(smiles)
         # print('soaps done')
@@ -127,7 +127,7 @@ class MasterDataset:
         torch.save(smiles, os.path.join(self.pth, 'smiles'))
         torch.save(x, os.path.join(self.pth, 'x'))
         torch.save(y, os.path.join(self.pth, 'y'))
-        torch.save(x_morfeus, os.path.join(self.pth, 'x_morfeus'))
+        #torch.save(x_morfeus, os.path.join(self.pth, 'x_morfeus'))
         #torch.save(graphs, os.path.join(self.pth, 'graphs'))
         print('processing done')
     def load(self) -> (dict, dict, np.ndarray, np.ndarray, np.ndarray, list):
@@ -145,8 +145,8 @@ class MasterDataset:
         else:
             x = torch.load(os.path.join(self.pth, 'x'), weights_only=False)
         y = torch.load(os.path.join(self.pth, 'y'), weights_only=False)
-        graphs = torch.load(os.path.join(self.pth, 'graphs'), weights_only=False)
-        print('loading done')
+        graphs = 1 #torch.load(os.path.join(self.pth, 'graphs'), weights_only=False)
+        #print('loading done')
         #return OrderedDict(list(smiles_index.items())[:20]), OrderedDict(list(index_smiles.items())[:20]), smiles[:20], x[:20], y[:20], graphs[:20]
         return smiles_index, index_smiles, smiles, x, y, graphs
 
@@ -170,13 +170,14 @@ class MasterDataset:
             idx = [idx]
         #print(f"idx: {idx}, dtype = {type(idx)}")
         #print(f"smiles: {self.smiles[idx]}")
-        if self.representation == 'ecfp' or self.representation == 'morfeus':
-            return self.x[idx], self.y[idx], self.smiles[idx]
+        #if self.representation == 'ecfp' or self.representation == 'morfeus':
+           # return self.x[idx], self.y[idx], self.smiles[idx]
         if self.representation == 'graph':
             return [self.graphs[i] for i in idx], self.y[idx], self.smiles[idx]
         if self.representation == 'smiles':
             return self.tokenize(self.smiles[idx]), self.y[idx], self.smiles[idx]
-
+        else:
+            return self.x[idx], self.y[idx], self.smiles[idx]
 
 def smi_to_scaff(smiles: str, includeChirality: bool = False):
     return MurckoScaffold.MurckoScaffoldSmiles(mol=Chem.MolFromSmiles(smiles), includeChirality=includeChirality)
