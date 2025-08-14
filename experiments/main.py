@@ -26,7 +26,11 @@ if __name__ == '__main__':
     parser.add_argument('-acq', help="Acquisition function ('random', 'exploration', 'exploitation', 'dynamic', "
                                      "'similarity', 'bald', 'dynamicbald')", default='exploitation')
     parser.add_argument('-bias', help='The level of bias ("random", "small", "large")', default='random')
+<<<<<<< HEAD
     parser.add_argument('-arch', help='The neural network architecture ("gcn", "mlp", "chembert", "only_morfeus")', default='mlp2048')
+=======
+    parser.add_argument('-arch', help='The neural network architecture ("gcn", "mlp", "chembert")', default='chembert')
+>>>>>>> ae7d9b4a868ffd6d33690fb92026e5067021694b
     parser.add_argument('-dataset', help='The dataset ("ALDH1", "PKM2", "VDR")', default='ALDH1')
     parser.add_argument('-retrain', help='Retrain the model every cycle', default='True')
     parser.add_argument('-batch_size', help='How many molecules we select each cycle', default=64)
@@ -37,8 +41,11 @@ if __name__ == '__main__':
     parser.add_argument('-function', default='relu')
     parser.add_argument('-epochs', default = 20)
     parser.add_argument('-n_layers', default = 3)
+<<<<<<< HEAD
     parser.add_argument('-size', default = 1)
     parser.add_argument('-max_screen_size', default=1000, type=int)
+=======
+>>>>>>> ae7d9b4a868ffd6d33690fb92026e5067021694b
     args = parser.parse_args()
 
     PARAMETERS['acquisition'] = [args.acq]
@@ -55,7 +62,10 @@ if __name__ == '__main__':
     PARAMETERS['function'] = [args.function]
     PARAMETERS['epochs'] = [int(args.epochs)]
     PARAMETERS['n_layers'] = [int(args.n_layers)]
+<<<<<<< HEAD
     PARAMETERS['max_screen_size'] = [int(args.max_screen_size)]
+=======
+>>>>>>> ae7d9b4a868ffd6d33690fb92026e5067021694b
     # LOG_FILE = f'{args.o}/{args.arch}_{args.acq}_{args.bias}_{args.batch_size}_simulation_results.csv'
     LOG_FILE = args.o
 
@@ -67,7 +77,11 @@ if __name__ == '__main__':
     experiments = [dict(zip(PARAMETERS.keys(), v)) for v in itertools.product(*PARAMETERS.values())]
     #print(experiments)
    # print(len(experiments))
+<<<<<<< HEAD
     for experiment in experiments:#runs 10 times, with 10 different seeds
+=======
+    for experiment in experiments:#runs 10 times, there are 10 models (anchored ensembling)
+>>>>>>> ae7d9b4a868ffd6d33690fb92026e5067021694b
 
         results = active_learning(n_start=experiment['n_start'],
                                   bias=experiment['bias'],
@@ -84,8 +98,11 @@ if __name__ == '__main__':
                                   dataset=experiment['dataset'],
                                   scrambledx=experiment['scrambledx'],
                                   scrambledx_seed=experiment['scrambledx_seed'],
+<<<<<<< HEAD
                                   ensemble_size=5, 
                                   #size = experiment['size'],
+=======
+>>>>>>> ae7d9b4a868ffd6d33690fb92026e5067021694b
                                   optimize_hyperparameters=False)
         
         # Add the experimental settings to the outfile
@@ -100,8 +117,14 @@ if __name__ == '__main__':
         results['scrambledx'] = experiment['scrambledx']
         results['scrambledx_seed'] = experiment['scrambledx_seed']
         results['dataset'] = experiment['dataset']
+<<<<<<< HEAD
         for e in results['hits_discovered']:
           print(e, end = ' ')
         results.to_csv(LOG_FILE, mode='a', index=False, header=False if os.path.isfile(LOG_FILE) else True)
         print(f'experiment {experiment} complete')
         break
+=======
+
+        results.to_csv(LOG_FILE, mode='a', index=False, header=False if os.path.isfile(LOG_FILE) else True)
+        print(f'experiment {experiment} complete')
+>>>>>>> ae7d9b4a868ffd6d33690fb92026e5067021694b

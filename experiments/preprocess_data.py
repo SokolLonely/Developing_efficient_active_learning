@@ -10,11 +10,15 @@ import pandas as pd
 from scipy.cluster import hierarchy
 from active_learning.data_prep import MasterDataset, load_hdf5, get_data, split_data, similarity_vectors
 from config import ROOT_DIR
+<<<<<<< HEAD
 import argparse
+=======
+>>>>>>> ae7d9b4a868ffd6d33690fb92026e5067021694b
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 
 if __name__ == '__main__':
+<<<<<<< HEAD
     parser = argparse.ArgumentParser()
     parser.add_argument('-size', default=1)
     args = parser.parse_args()
@@ -24,6 +28,14 @@ if __name__ == '__main__':
 
         df = get_data(dataset=dataset)
         df_screen, df_test = split_data(df, screen_size=int(100000*size), test_size=int(20000*size), dataset=dataset)
+=======
+
+    # Process the data
+    for dataset in ['ALDH1']:
+
+        df = get_data(dataset=dataset)
+        df_screen, df_test = split_data(df, screen_size=100000, test_size=20000, dataset=dataset)
+>>>>>>> ae7d9b4a868ffd6d33690fb92026e5067021694b
 
         MasterDataset(name='screen', df=df_screen, overwrite=True, dataset=dataset)
         MasterDataset(name='test', df=df_test, overwrite=True, dataset=dataset)
@@ -33,8 +45,13 @@ if __name__ == '__main__':
 
         similarity_vectors(df_screen, df_test, dataset=dataset)
 
+<<<<<<< HEAD
     # Perform clustering for each dataset
     for dataset, tani_cutoffs in zip(['ALDH1'], [[0.80, 0.61]]): #'PKM2', 'VDR',     , [0.80, 0.70], [0.80, 0.60]
+=======
+    '''# Perform clustering for each dataset
+    for dataset, tani_cutoffs in zip(['ALDH1'], [[0.80, 0.61], [0.80, 0.70], [0.80, 0.60]]): #'PKM2', 'VDR', 
+>>>>>>> ae7d9b4a868ffd6d33690fb92026e5067021694b
         ds_screen = MasterDataset('screen', representation='ecfp', dataset=dataset)
         x_screen, y_screen, smiles_screen = ds_screen.all()
         smiles_index = torch.load(f'data/{dataset}/screen/smiles_index')
@@ -105,7 +122,11 @@ if __name__ == '__main__':
         torch.save(cluster_smiles_with_hits, f'data/{dataset}/screen/starting_clusters')
 
     # Process three other datasets with very few actives as an extra case-study
+<<<<<<< HEAD
     '''for dataset in ['IDH1', 'ADRB2', 'OPRK1', 'GBA', 'KAT2A', 'FEN1']:
+=======
+    for dataset in ['IDH1', 'ADRB2', 'OPRK1', 'GBA', 'KAT2A', 'FEN1']:
+>>>>>>> ae7d9b4a868ffd6d33690fb92026e5067021694b
 
         df = get_data(dataset=dataset)
         df_screen, df_test = split_data(df, screen_size=100000, test_size=20000, dataset=dataset)
