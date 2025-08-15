@@ -363,8 +363,8 @@ class Model(torch.nn.Module):
             self.model = GIN(**kwargs)
  #       elif architecture == 'newmlp':
 #            self.model = NewMLP(**kwargs)
-        elif achitecture == 'mm':
-            self.model = AttMLP(n_layers = n_layers, n_hidden= 1024, function = function, epochs = epochs, in_feats = 1192, **kwargs)
+        elif architecture == 'mm':
+            self.model = AttMLP(n_layers = n_layers, n_hidden= 1024,  epochs = epochs, in_feats = 1192, **kwargs)
         elif architecture == 'chembert':
             self.model =Chemberta(**kwargs)
             self.training_args = TrainingArguments(
@@ -459,9 +459,9 @@ class Model(torch.nn.Module):
             self.train_loss.append(epoch_loss)
             self.epoch += 1
             early_stopping(epoch_loss)
-            if early_stopping.early_stop:
+            #if early_stopping.early_stop:
                #print("Early stopping triggered")
-               break
+               #break
         
       else:
             

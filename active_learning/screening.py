@@ -26,7 +26,7 @@ TRAINING_BATCH_SIZE = 64
 def active_learning(n_start: int = 64, acquisition_method: str = 'exploration', max_screen_size: int = None,
                     batch_size: int = 16,n_layers = 3, function = 'relu', epochs = 50, architecture: str = 'gcn', seed: int = 0, bias: str = 'random',
                     optimize_hyperparameters: bool = False, ensemble_size: int = 10, retrain: bool = True,
-                    anchored: bool = True, dataset: str = 'ALDH1', scrambledx: bool = False,
+                    anchored: bool = True, dataset: str = 'ALDH1', scrambledx: bool = False, corrupt: bool = False,
                     scrambledx_seed: int = 1) -> pd.DataFrame:
     """
     :param n_start: number of molecules to start out with
@@ -44,24 +44,35 @@ def active_learning(n_start: int = 64, acquisition_method: str = 'exploration', 
     """
 
     # Load the datasets
-    if architecture in ['mlp', 'rf']:
+    if architecture in ['mlp', 'rf', 'mlp2048']:
         representation = 'ecfp'
     elif architecture in ['chembert']:
         representation = 'smiles'
         ensemble_size = 1  
     elif architecture in ['morfeus_mlp']:
         representation = 'morfeus'
+    elif architecture in ['only_morfeus']:
+        representation = 'only_morfeus'
+    elif architecture in ['robert768']:
+        representation = 'robert768'
+    elif architecture in ['chemgpt']:
+        representation = 'chemgpt'
+    elif architecture in ['maccs']:
+        representation = 'maccs'
+    elif architecture in ['acsf']:
+        representation = 'acsf'
     elif architecture in ['mm']:
         representation = 'mm'
     else:
         representation = 'graph'
+    
     ds_screen = MasterDataset('screen', representation=representation, dataset=dataset, scramble_x=scrambledx,
                               scramble_x_seed=scrambledx_seed)
     ds_test = MasterDataset('test', representation=representation, dataset=dataset)
-    #print(ds_screen)
+    
     # Initiate evaluation trackers
     eval_test, eval_screen, eval_train = Evaluate(), Evaluate(), Evaluate()
-    handler = Handler(n_start=n_start, seed=seed, bias=bias, dataset=dataset)
+    handler = Handler(n_start=n_start, seed=seed, bias=bias, dataset=dataset, corrupt = corrupt)
 
     # Define some variables
     hits_discovered, total_mols_screened, all_train_smiles = [], [], []
@@ -82,21 +93,19 @@ def active_learning(n_start: int = 64, acquisition_method: str = 'exploration', 
 
     # While max_screen_size has not been achieved, do some active learning in cycles
     for cycle in range(n_cycles+1): 
-        #print(f"cycle: {cycle}")
+        print(f"cycle: {cycle}")
         # Get the train and screen data for this cycle
         train_idx, screen_idx = handler()
-        #print(train_idx)
         x_train, y_train, smiles_train = ds_screen[train_idx]
-        #print(x_train[:10])
-        #print(x_train[:5])
-        #print(smiles_train[:5])#train chembert on this
         x_screen, y_screen, smiles_screen = ds_screen[screen_idx]
         if representation == 'smiles':
             x_screen = smiles_screen
             x_train = smiles_train
+
         # Update some tracking variables
         all_train_smiles.append(';'.join(smiles_train.tolist()))
         hits_discovered.append(sum(y_train).item())
+        print(f"hits_discovered: {hits_discovered}")
         hits = smiles_train[np.where(y_train == 1)]
         total_mols_screened.append(len(y_train))
 
@@ -124,7 +133,7 @@ def active_learning(n_start: int = 64, acquisition_method: str = 'exploration', 
                                                 shuffle=False, pin_memory=True, architecture=architecture)
             #print(data)
             # Initiate and train the model (optimize if specified)
-            #print("Training model")
+            print("Training model")
             if retrain or cycle == 0:
                 M = Ensemble(seed=seed, ensemble_size=ensemble_size,epochs = epochs, architecture=architecture,n_layers=n_layers, function = function, anchored=anchored)
                 if cycle == 0 and optimize_hyperparameters:
@@ -132,7 +141,7 @@ def active_learning(n_start: int = 64, acquisition_method: str = 'exploration', 
                 M.train(train_loader_balanced, verbose=False)
 
             # Do inference of the train/test/screen data
-            #print("Train/test/screen inference")
+            print("Train/test/screen inference")
             train_logits_N_K_C = M.predict(train_loader, architecture)
             eval_train.eval(train_logits_N_K_C, y_train, architecture)
 
@@ -179,9 +188,9 @@ def active_learning(n_start: int = 64, acquisition_method: str = 'exploration', 
             batch_size = max_screen_size - len(train_idx)
 
         # Select the molecules to add for the next cycle
-        #print("Sample acquisition")
+        print("Sample acquisition")
         picks = ACQ.acquire(screen_logits_N_K_C, smiles_screen, hits=hits, n=batch_size)
-        #print(f"Picked {len(picks)} molecules (batch size = {batch_size})") # for some reason returns only one molecule, instead of 64
+        print(f"Picked {len(picks)} molecules (batch size = {batch_size})") # for some reason returns only one molecule, instead of 64
         #print(picks)
         #print(type(picks))
         handler.add(picks)

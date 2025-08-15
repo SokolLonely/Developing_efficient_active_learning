@@ -16,15 +16,20 @@ from config import ROOT_DIR
 
 
 class Handler:
-    def __init__(self, n_start: int = 64, bias: str = 'random', seed: int = 42, dataset: str = 'ALDH1') -> None:
-
+    def __init__(self, n_start: int = 64, bias: str = 'random', seed: int = 42, dataset: str = 'ALDH1', corrupt = False) -> None:
+        from collections import OrderedDict
         assert bias in ['random', 'small', 'large'], "'bias' has to be either 'random', 'small', or 'large'"
         assert n_start <= 64 or bias == 'random', 'Number of starting molecules has to be <= 64'
 
         self.index_smiles = torch.load(os.path.join(ROOT_DIR, 'data', dataset, 'screen', 'index_smiles'), weights_only=False)
+        
+        index_smiles = OrderedDict(list(self.index_smiles.items()))
         self.smiles_index = torch.load(os.path.join(ROOT_DIR, 'data', dataset, 'screen', 'smiles_index'), weights_only=False)
+        self.smiles_index = OrderedDict(list(self.smiles_index.items()))
         self.all_y = torch.load(os.path.join(ROOT_DIR, 'data', dataset, 'screen', 'y'), weights_only=False)
-
+        if corrupt:
+            self.all_y = flip_zeros(self.all_y, fraction=0.01, seed=seed)
+        #self.all_y = OrderedDict(list(self.all_y.items())
         self.dataset = dataset
         self.selected_start_cluster = None
         self.train_idx, self.screen_idx = self.get_start_data(n_start=n_start, bias=bias, seed=seed)
@@ -83,3 +88,16 @@ class Handler:
 
     def __call__(self, *args, **kwargs):
         return self.get_idx()
+def flip_zeros(tensor, fraction=0.01, seed=42):
+
+    if seed is not None:
+        torch.manual_seed(seed)
+    zeros_mask = (tensor == 0)
+    num_zeros = zeros_mask.sum().item()
+    n = max(1, int(fraction * num_zeros))
+    zero_indices = zeros_mask.nonzero(as_tuple=False)
+    perm = torch.randperm(num_zeros)[:n]
+    flip_indices = zero_indices[perm]
+    tensor[flip_indices] = 1
+    
+    return tensor
