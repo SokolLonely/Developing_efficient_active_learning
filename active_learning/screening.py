@@ -26,7 +26,7 @@ TRAINING_BATCH_SIZE = 64
 def active_learning(n_start: int = 64, acquisition_method: str = 'exploration', max_screen_size: int = None,
                     batch_size: int = 16,n_layers = 3, function = 'relu', epochs = 50, architecture: str = 'gcn', seed: int = 0, bias: str = 'random',
                     optimize_hyperparameters: bool = False, ensemble_size: int = 10, retrain: bool = True,
-                    anchored: bool = True, dataset: str = 'ALDH1', scrambledx: bool = False, corrupt: bool = False,
+                    anchored: bool = True, dataset: str = 'ALDH1', scrambledx: bool = False, corrupt: int = False,
                     scrambledx_seed: int = 1) -> pd.DataFrame:
     """
     :param n_start: number of molecules to start out with
@@ -97,6 +97,7 @@ def active_learning(n_start: int = 64, acquisition_method: str = 'exploration', 
         # Get the train and screen data for this cycle
         train_idx, screen_idx = handler()
         x_train, y_train, smiles_train = ds_screen[train_idx]
+        y_train[handler.f_p] = 1 # Set the false positives to 1, so they are considered hits
         x_screen, y_screen, smiles_screen = ds_screen[screen_idx]
         if representation == 'smiles':
             x_screen = smiles_screen
@@ -104,9 +105,10 @@ def active_learning(n_start: int = 64, acquisition_method: str = 'exploration', 
 
         # Update some tracking variables
         all_train_smiles.append(';'.join(smiles_train.tolist()))
-        hits_discovered.append(sum(y_train).item())
-        print(f"hits_discovered: {hits_discovered}")
-        hits = smiles_train[np.where(y_train == 1)]
+        temp = sum(y_train).item()
+        hits_discovered.append(temp-handler.n_false_labels)
+        #print(f"hits_discovered: {hits_discovered}")
+        hits = smiles_train[np.where(y_train == 1)] 
         total_mols_screened.append(len(y_train))
 
         if len(train_idx) >= max_screen_size:

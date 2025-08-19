@@ -28,13 +28,13 @@ class Acquisition:
                                    'bald': bald,
                                    'mc_bald': mc_bald,
                                    'prod_1': high_confidence_consensus_prod_1,
-                                   'prod_0': high_confidence_consensus_prod_0,
+                                   'prod_0': high_confidence_consensus_prod_0,#bad
                                    'sum_1': high_confidence_consensus_sum_1,
-                                   'sum_0': high_confidence_consensus_sum_0,
-                                   'bothv1': confidence_and_exploitation_v1,
-                                   'bothv2': confidence_and_exploitation_v2,
+                                   'sum_0': high_confidence_consensus_sum_0,#bad
                                    'dynamic_exploration_mc_bald': dynamic_exploration_mc_bald,
-                                   'similarity': similarity_search}
+                                    'bothv1': confidence_and_exploitation_v1,#bad
+                                    'bothv2': confidence_and_exploitation_v2,
+                                    'similarity': similarity_search}
 
         assert method in self.acquisition_method.keys(), f"Specified 'method' not available. " \
                                                          f"Select from: {self.acquisition_method.keys()}"
@@ -144,20 +144,6 @@ def mc_mutual_information(logits_N_K_C: Tensor) -> Tensor:#CHANGE AFTER TESTING
     mutual_info = entropy_mean - mean_entropy  # [N]
 
     return mutual_info
-def confidence_and_exploitation_v1(logits_N_K_C: Tensor, smiles: np.ndarray[str], n: int = 1, **kwargs) -> np.ndarray[str]:
-    mean_probs_hits = torch.mean(torch.exp(logits_N_K_C), dim=1)[:, 1]
-    entropy_mean_N = mean_sample_entropy(logits_N_K_C)
-    result = mean_probs_hits * entropy_mean_N
-    picks_idx = torch.argsort(result, descending=True)[:n]  # cuts to len n
-    return np.array([smiles[picks_idx.cpu()]]) if n == 1 else smiles[picks_idx.cpu()]
-
-def confidence_and_exploitation_v2(logits_N_K_C: Tensor, smiles: np.ndarray[str], n: int = 1, **kwargs) -> np.ndarray[str]:
-    mean_probs_hits = torch.mean(torch.exp(logits_N_K_C), dim=1)[:, 1]
-    entropy_mean_N = mean_sample_entropy(logits_N_K_C)
-    result = mean_probs_hits * (entropy_mean_N **-1)
-    picks_idx = torch.argsort(result, descending=True)[:n]  # cuts to len n
-    return np.array([smiles[picks_idx.cpu()]]) if n == 1 else smiles[picks_idx.cpu()]
-
 def high_confidence_consensus_sum_1(logits_N_K_C: Tensor, smiles: np.ndarray[str], n: int = 1, **kwargs) -> np.ndarray[str]:
     picks = logits_N_K_C[:,:,1].sum(dim=1)
     picks_idx = torch.argsort(picks, descending=True)[:n] #cuts to len n
@@ -177,7 +163,7 @@ def high_confidence_consensus_prod_1(logits_N_K_C: Tensor, smiles: np.ndarray[st
     return np.array([smiles[picks_idx.cpu()]]) if n == 1 else smiles[picks_idx.cpu()]
 
 def high_confidence_consensus_prod_0(logits_N_K_C: Tensor, smiles: np.ndarray[str], n: int = 1, **kwargs) -> np.ndarray[str]:
-    picks = logits_N_K_C[:,:,0].prod(dim=1)
+    picks = logits_N_K_C[:,:,1].prod(dim=1)
     picks_idx = torch.argsort(picks, descending=True)[:n] #cuts to len n
 
     return np.array([smiles[picks_idx.cpu()]]) if n == 1 else smiles[picks_idx.cpu()]
@@ -191,6 +177,19 @@ def greedy_exploitation(logits_N_K_C: Tensor, smiles: np.ndarray[str], n: int = 
 
     return np.array([smiles[picks_idx.cpu()]]) if n == 1 else smiles[picks_idx.cpu()]
 
+def confidence_and_exploitation_v1(logits_N_K_C: Tensor, smiles: np.ndarray[str], n: int = 1, **kwargs) -> np.ndarray[str]:
+    mean_probs_hits = torch.mean(torch.exp(logits_N_K_C), dim=1)[:, 1]
+    entropy_mean_N = mean_sample_entropy(logits_N_K_C)
+    result = mean_probs_hits * entropy_mean_N
+    picks_idx = torch.argsort(result, descending=True)[:n]  # cuts to len n
+    return np.array([smiles[picks_idx.cpu()]]) if n == 1 else smiles[picks_idx.cpu()]
+
+def confidence_and_exploitation_v2(logits_N_K_C: Tensor, smiles: np.ndarray[str], n: int = 1, **kwargs) -> np.ndarray[str]:
+    mean_probs_hits = torch.mean(torch.exp(logits_N_K_C), dim=1)[:, 1]
+    entropy_mean_N = mean_sample_entropy(logits_N_K_C)
+    result = mean_probs_hits * (entropy_mean_N **-1)
+    picks_idx = torch.argsort(result, descending=True)[:n]  # cuts to len n
+    return np.array([smiles[picks_idx.cpu()]]) if n == 1 else smiles[picks_idx.cpu()]
 
 def greedy_exploration(logits_N_K_C: Tensor, smiles: np.ndarray[str], n: int = 1, **kwargs) -> np.ndarray[str]:
     """ Get the n most samples with the most variance in hit classification """
