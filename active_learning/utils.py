@@ -465,8 +465,8 @@ def smiles_to_morfeus(smiles: list[str], silent: bool = True, to_array: bool = T
     output = []
     for string in tqdm(smiles, disable=silent):
         #new_path = os.path.join( path, f"{string.replace("/", "").replace("\\", "")}.xyz")
-        smiles_to_xyz(string, filename = new_path)
-        temp = compute_morfeus_descriptors(string, new_path, filename = new_path)
+        #smiles_to_xyz(string, filename = new_path)
+        temp = compute_mordred_descriptors(string)
         output.append(temp)
     
     if not to_array:
@@ -505,7 +505,7 @@ def smiles_to_xyz(smiles, filename="output.xyz"):
 
     #print(f"XYZ file written to {filename}")
 
-def compute_morfeus_descriptors(smiles, xyzname, filename):
+def compute_mordred_descriptors(smiles):
     # try:
     #  from morfeus import read_xyz, SASA, BuriedVolume, Sterimol, Dispersion
     # except:
@@ -513,27 +513,11 @@ def compute_morfeus_descriptors(smiles, xyzname, filename):
     try:
         transform_mordred = FPVecTransformer(kind="mordred", ignore_3D=False, replace_nan=True, n_jobs=1) # don't ignore 3D descriptors
         features_mordred, index_mordred = transform_mordred(smiles, ignore_errors=True)
-        '''descriptors = []
-        elements, coordinates = read_xyz(xyzname)
-        sasa = SASA(elements, coordinates)
-        #buriedvolume = BuriedVolume(elements, coordinates, 1)#
-        #sterimol = Sterimol(elements, coordinates, 1, 2)#
-        dispersion = Dispersion(elements, coordinates)
-        features_mordred = np.append(features_mordred, [sasa.area])
-        features_mordred = np.append(features_mordred, [sasa.volume])
-        features_mordred = np.append(features_mordred, [dispersion.p_int])'''
-        #descriptors.append([sasa.area])
-        #descriptors.append([sasa.volume])
-        #descriptors.append([buriedvolume.fraction_buried_volume])
-        #descriptors.append([sterimol.B_1_value])
-        #descriptors.append([sterimol.B_5_value])
-        #descriptors.append([sterimol.L_value])
-        #descriptors.append([dispersion.p_int])
-        #df_descriptors = pd.DataFrame(descriptors)
         return features_mordred
     except Exception as e:
         print(f"Morfeus descriptor calculation failed for {filename}: {str(e)}")
         return np.zeros((1826, 1))
+
 def smiles_to_chemberta_embeddings(smiles: list[str], model_name="seyonec/ChemBERTa-zinc-base-v1",   silent: bool = True, to_array: bool = True) -> np.ndarray:
     """ Get a Numpy array of ChemBERTa embeddings from a list of SMILES strings """
     import torch

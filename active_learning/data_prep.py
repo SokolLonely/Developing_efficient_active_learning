@@ -30,9 +30,9 @@ def get_data(random_state: int = 42, dataset: str = 'ALDH1'):
         actives = [canonicalize(smi.strip().split()[0]) for smi in f.readlines()]
 
     # remove duplicates:
-    inactives = list(set(inactives))
-    actives = list(set(actives))
-
+    inactives = list(dict.fromkeys(inactives))
+    actives = list(dict.fromkeys(actives))
+    
     # remove intersecting molecules:
     intersecting_mols = np.intersect1d(inactives, actives)
     inactives = [smi for smi in inactives if smi not in intersecting_mols]
@@ -115,7 +115,9 @@ class MasterDataset:
         x = smiles_to_ecfp(smiles, silent=False)
         y = torch.tensor(df.y.tolist())
         #x_roberta_embedding = smiles_to_chemberta_embeddings(smiles, silent=False)
+        print('chemberta started')
         #x_llm_embedding = smiles_to_chemgpt_embeddings(smiles, silent=False)
+        print('maccs started')
         x_maccs = smiles_to_maccs(smiles, silent=False)
         #x_morfeus = smiles_to_morfeus(smiles, silent=False, path = self.pth)
         #graphs = [smiles_to_graph(smi, y=y.type(torch.LongTensor)) for smi, y in tqdm(zip(smiles, y))]
@@ -123,7 +125,7 @@ class MasterDataset:
         # print('new part started') 
         # x_soap = smiles_to_soap(smiles)
         # print('soaps done')
-        # x_acsf = smiles_to_acsf(smiles)
+        #x_acsf = smiles_to_acsf(smiles)
         # print('new part finished')
         
 
@@ -177,7 +179,7 @@ class MasterDataset:
             x_ecfp = torch.load(os.path.join(self.pth, 'x'), weights_only=False)[:var_len]
             x_maccs = torch.load(os.path.join(self.pth, 'x_maccs'), weights_only=False)[:var_len]
             x = np.concatenate((x_ecfp,  x_maccs, ), axis=1)
-            x = np.pad(x, ((0, 0), (0, 1)), mode='constant')#pad to 1192 len on axis 1 for self-attention 
+            x = np.pad(x, ((0, 0), (0, 9)), mode='constant')#pad to 1200 len on axis 1 for self-attention 
         else:
             x = torch.load(os.path.join(self.pth, 'x'), weights_only=False)[:var_len]
        

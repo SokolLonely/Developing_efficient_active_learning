@@ -110,7 +110,7 @@ class AttMLP(torch.nn.Module):
             self.func = F.leaky_relu
         self.fc = torch.nn.ModuleList()
         self.fc_norms = torch.nn.ModuleList()
-        self.fc.append(torch.nn.MultiheadAttention(embed_dim=in_feats, num_heads=8, batch_first=True))
+        self.fc.append(torch.nn.MultiheadAttention(embed_dim=in_feats, num_heads=16, batch_first=True))
         for i in range(n_layers):
             self.fc.append(torch.nn.Linear(in_feats if i == 0 else n_hidden, n_hidden))
             self.fc_norms.append(BatchNorm(n_hidden, allow_single_element=True))
@@ -396,7 +396,9 @@ class Model(torch.nn.Module):
         elif architecture == 'acsf':
             self.model = MLP(n_layers = n_layers, n_hidden= 1024, function = function, epochs = epochs, in_feats = 1200, **kwargs)
         elif architecture == 'mm':
-            self.model = AttMLP(n_layers = n_layers, n_hidden= 1024, function = function, epochs = epochs, in_feats = 1192, **kwargs)
+            self.model = AttMLP(n_layers = n_layers, n_hidden= 1024, function = function, epochs = epochs, in_feats = 1200, **kwargs)
+        elif architecture == 'amlp':
+            self.model = AttMLP(n_layers = n_layers, function = function, epochs = epochs,  **kwargs)
         else:
             self.model = GAT(**kwargs)
 

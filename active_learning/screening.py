@@ -44,7 +44,7 @@ def active_learning(n_start: int = 64, acquisition_method: str = 'exploration', 
     """
 
     # Load the datasets
-    if architecture in ['mlp', 'rf', 'mlp2048']:
+    if architecture in ['mlp', 'rf', 'mlp2048', 'amlp']:
         representation = 'ecfp'
     elif architecture in ['chembert']:
         representation = 'smiles'
