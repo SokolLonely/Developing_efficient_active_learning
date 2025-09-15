@@ -352,55 +352,64 @@ class EarlyStopping:
                 self.early_stop = True
 #from transformers import TrainingArguments, Trainer
 class Model(torch.nn.Module):
-    def __init__(self, architecture: str,n_layers=3, function = 'relu', epochs = 50, **kwargs):
+    def __init__(self, architecture: str, n_hidden, n_layers=3, function = 'relu', epochs = 50, **kwargs):
         super().__init__()
         #assert architecture in ['gcn', 'mlp', 'gat', 'gin',  'chembert', 'morfeus_mlp', 'only_morfeus', 'mlp2048', 'robert768', 'chemgpt', 'acsf', 'maccs']
         self.architecture = architecture
-        if architecture == 'mlp':
-            self.model = MLP(n_layers = n_layers, function = function, epochs = epochs, **kwargs)
-        elif architecture == 'gcn':
-            self.model = GCN( **kwargs)
-        elif architecture == 'gin':
-            self.model = GIN(**kwargs)
-        elif architecture == 'newmlp':
-            self.model = NewMLP(**kwargs)
-        elif architecture == 'chembert':
-            self.model =Chemberta(**kwargs)
-            self.training_args = TrainingArguments(
-            output_dir="./chemberta-finetuned",
-            eval_strategy="epoch",
-            save_strategy="epoch",
-            logging_strategy="epoch",
-            learning_rate=2e-5,
-            per_device_train_batch_size=16,
-            per_device_eval_batch_size=16,
-            num_train_epochs=epochs,
-            weight_decay=self.model.weight_decay,
-            load_best_model_at_end = True,
-            #compute_metrics=compute_metrics,
-            metric_for_best_model="accuracy",
-            report_to="none",
-            )
-        elif architecture == 'morfeus_mlp':
-             self.model = MLP(n_layers = n_layers, function = function, epochs = epochs, in_feats = 2850, **kwargs)
-        elif architecture == 'only_morfeus':
-             self.model = MLP(n_layers = n_layers, function = function, epochs = epochs, in_feats = 1826, **kwargs)
-        elif architecture == 'mlp2048':
-            self.model = MLP(n_layers = n_layers, n_hidden= 2048, function = function, epochs = epochs, in_feats = 2048, **kwargs)
-        elif architecture == 'robert768':
-            self.model = MLP(n_layers = n_layers, function = function, epochs = epochs, in_feats = 768, **kwargs)
-        elif architecture == 'chemgpt':
-            self.model = MLP(n_layers = n_layers, n_hidden= 2048, function = function, epochs = epochs, in_feats = 2048, **kwargs)
-        elif architecture == 'maccs':
-            self.model = MLP(n_layers = 2, function = function, epochs = epochs, in_feats = 167, **kwargs)
-        elif architecture == 'acsf':
-            self.model = MLP(n_layers = n_layers, n_hidden= 1024, function = function, epochs = epochs, in_feats = 1200, **kwargs)
-        elif architecture == 'mm':
-            self.model = AttMLP(n_layers = n_layers, n_hidden= 1024, function = function, epochs = epochs, in_feats = 1200, **kwargs)
-        elif architecture == 'amlp':
-            self.model = AttMLP(n_layers = n_layers, function = function, epochs = epochs,  **kwargs)
+
+# Default kwargs
+        common_kwargs = dict(
+        n_layers=n_layers,
+        function=function,
+        epochs=epochs,
+        )
+
+        ARCH_PARAMS = {
+            "mlp":       (MLP, common_kwargs),
+            "gcn":       (GCN, {}),
+            "gin":       (GIN, {}),
+            
+            "chembert":  (Chemberta, {}),  # see if statement below
+            "morfeus_mlp": (MLP, {**common_kwargs, "in_feats": 2850}),
+            "only_morfeus": (MLP, {**common_kwargs, "in_feats": 1826}),
+            "mlp2048":   (MLP, {**common_kwargs, "n_hidden": 2048, "in_feats": 2048}),
+            "robert768": (MLP, {**common_kwargs, "in_feats": 768}),
+            "chemgpt":   (MLP, {**common_kwargs, "n_hidden": 2048, "in_feats": 2048}),
+            "maccs":     (MLP, {**common_kwargs, "n_layers": 2, "in_feats": 167}),
+            "acsf":      (MLP, {**common_kwargs, "n_hidden": n_hidden, "in_feats": 1200}),
+            "mm":        (AttMLP, {**common_kwargs, "n_hidden": n_hidden, "in_feats": 1200}),
+            "mmnoatt":   (MLP, {**common_kwargs, "n_hidden": n_hidden, "in_feats": 1200}),
+            "amlp":      (AttMLP, common_kwargs),
+            "x_512":     (MLP, {**common_kwargs, "n_hidden": n_hidden, "in_feats": 512}),
+            "x_256":     (MLP, {**common_kwargs, "n_hidden": n_hidden, "in_feats": 256}),
+            "x_128":     (MLP, {**common_kwargs, "n_hidden": n_hidden, "in_feats": 128}),
+            "mm_768":    (MLP, {**common_kwargs, "n_hidden": n_hidden, "in_feats": 768}),
+            "mm_512":    (MLP, {**common_kwargs, "n_hidden": n_hidden, "in_feats": 512}),
+            "mm_256":    (MLP, {**common_kwargs, "n_hidden": n_hidden, "in_feats": 256}),
+}
+
+        if architecture == "chembert":
+                self.model = Chemberta(**kwargs)
+                self.training_args = TrainingArguments(
+                    output_dir="./chemberta-finetuned",
+                    eval_strategy="epoch",
+                    save_strategy="epoch",
+                    logging_strategy="epoch",
+                    learning_rate=2e-5,
+                    per_device_train_batch_size=16,
+                    per_device_eval_batch_size=16,
+                    num_train_epochs=epochs,
+                    weight_decay=self.model.weight_decay,
+                    load_best_model_at_end=True,
+                    metric_for_best_model="accuracy",
+                    report_to="none",
+                    )
+        elif architecture in ARCH_PARAMS:
+                model_class, params = ARCH_PARAMS[architecture]
+                self.model = model_class(**params, **kwargs)
         else:
-            self.model = GAT(**kwargs)
+    # Default fallback
+             self.model = GAT(**kwargs)
 
         
         self.device_type = "cuda" if torch.cuda.is_available() else "cpu"
@@ -534,7 +543,7 @@ class Model(torch.nn.Module):
            
 class Ensemble(torch.nn.Module):
     """ Ensemble of GCNs"""
-    def __init__(self, ensemble_size: int = 10, seed: int = 0,n_layers =3, function = 'relu',epochs = 50, architecture: str = 'mlp', **kwargs) -> None:
+    def __init__(self, ensemble_size: int = 10, seed: int = 0,n_layers =3, n_hidden = 1024, function = 'relu',epochs = 50, architecture: str = 'mlp', **kwargs) -> None:
         self.ensemble_size = ensemble_size
         if architecture == 'chembert':
             self.ensemble_size = 1
@@ -544,7 +553,7 @@ class Ensemble(torch.nn.Module):
         self.n_layers = n_layers
         rng = np.random.default_rng(seed=seed)
         self.seeds = rng.integers(0, 1000, ensemble_size)
-        self.models = {i: Model(seed=s, architecture=architecture, n_layers =n_layers, epochs = epochs, function = function, **kwargs) for i, s in enumerate(self.seeds)}
+        self.models = {i: Model(seed=s, architecture=architecture, n_layers =n_layers, n_hidden = n_hidden, epochs = epochs, function = function, **kwargs) for i, s in enumerate(self.seeds)}
 
     def optimize_hyperparameters(self, x, y: DataLoader, **kwargs):
         # raise NotImplementedError

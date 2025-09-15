@@ -409,31 +409,80 @@ def smiles_to_soap(smiles: list[str], rCut=6.0, species=["H", "O","C", "N", "S",
         output.append(f)
 
     return output
-def smiles_to_acsf(smiles: list[str],species=["H", "O","C", "N", "S", "Cl", "Br", 'F', "I", "P"], rCut=6.0,pad_size = 120, silent: bool = True, to_array: bool = True):
-    """ Get a Numpy array of SOAPs from a list of SMILES strings """
-    from dscribe.descriptors import ACSF
-    from ase.io import read
+from typing import List, Optional
+import numpy as np
+from tqdm import tqdm
+from dscribe.descriptors import ACSF
+from ase import Atoms
+def _smiles_to_acsf_one(smiles: str, acsf: ACSF) -> Optional[np.ndarray]:
+    """
+    Convert a single SMILES string to an ACSF array (shape: n_atoms x n_features).
+    Returns None if conversion or descriptor calculation fails."""
+    
+    try:
+        mols = smiles_to_rdkit_mol([smiles])        # list of RDKit Mols
+        if not mols or mols[0] is None:
+            return None
+        atoms_list = rdkit_mol_to_ase(mols)         # list of ASE Atoms
+        if not atoms_list or atoms_list[0] is None:
+            return None
+        atoms = atoms_list[0]
+        desc = acsf.create(atoms) 
+        return np.asarray(desc)
+    except Exception:
+        # Any failure -> return None
+        return None
 
-    if type(smiles) is str:
+def smiles_to_acsf(
+    smiles: List[str] | str,
+    species: List[str] = ["H", "O", "C", "N", "S", "Cl", "Br", "F", "I", "P"],
+    rCut: float = 6.0,
+    pad_size: int = 120,
+    silent: bool = True,
+    to_array: bool = True
+) -> np.ndarray:
+    
+    """Convert a list (or single) SMILES to an array of ACSF descriptors.
+    - Failed molecules: become rows of all zeros.
+    Returns: np.ndarray shape (n_smiles, pad_size * n_features)"""
+    
+    if isinstance(smiles, str):
         smiles = [smiles]
-    #convert smiles to rdkit atoms
-    mols = smiles_to_rdkit_mol(smiles)
-    atoms = rdkit_mol_to_ase(mols)
-    # Set up the SOAP descriptor with parameters:
-    # species, rcut, nmax, and lmax
-    acsf = ACSF(species=species,r_cut=rCut)
-    ac = [acsf.create(s) for s in tqdm(atoms, disable=silent)]
-    # if not to_array:
-    #     return ac
+    acsf = ACSF(species=species, r_cut=rCut)
+
+    results = []
+    for s in tqdm(smiles, disable=silent):
+        res = _smiles_to_acsf_one(s, acsf)
+        results.append(res)
+
+    # Determine n_features:
+    n_features = None
+    for r in results:
+        if r is not None:
+            n_features = r.shape[1]
+            break
 
     output = []
-    for f in ac:
-        #arr = np.zeros((1,))
-        #ConvertToNumpyArray(f, arr)
-        f = np.pad(f, ((0, pad_size - f.shape[0]), (0, 0), ), constant_values=-1).ravel()
-        output.append(f)
+    for r in results:
+        if r is None:        
+            padded = np.zeros((pad_size, n_features), dtype=float)
+        else:
+            if r.shape[0] > pad_size:
+                r_used = r[:pad_size, :]
+            else:
+                r_used = r
+            pad_rows = pad_size - r_used.shape[0]
+            if pad_rows > 0:
+                padded = np.pad(r_used, ((0, pad_rows), (0, 0)), constant_values=-1)
+            else:
+                padded = r_used  
+        output.append(padded.ravel())
 
-    return np.asarray(output)
+    result_array = np.asarray(output)
+    if to_array:
+        return result_array
+    else:
+        return results
 
 def smiles_to_ecfp(smiles: list[str], radius: int = 3, nbits: int = 1024, silent: bool = True, to_array: bool = True) \
         -> np.ndarray:

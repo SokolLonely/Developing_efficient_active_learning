@@ -12,7 +12,7 @@ import torch
 import h5py
 import transformers
 from config import ROOT_DIR
-
+from sklearn.decomposition import PCA
 from active_learning.utils import molecular_graph_featurizer as smiles_to_graph, scramble_features, smiles_to_ecfp, smiles_to_maccs, \
     get_tanimoto_matrix, check_featurizability, scramble_graphs, smiles_to_rdkit_mol, rdkit_mol_to_ase, smiles_to_acsf, smiles_to_soap, smiles_to_morfeus, smiles_to_chemberta_embeddings, smiles_to_chemgpt_embeddings
 
@@ -116,9 +116,9 @@ class MasterDataset:
         y = torch.tensor(df.y.tolist())
         #x_roberta_embedding = smiles_to_chemberta_embeddings(smiles, silent=False)
         print('chemberta started')
-        #x_llm_embedding = smiles_to_chemgpt_embeddings(smiles, silent=False)
+        x_llm_embedding = smiles_to_chemgpt_embeddings(smiles, silent=False)
         print('maccs started')
-        x_maccs = smiles_to_maccs(smiles, silent=False)
+        #x_maccs = smiles_to_maccs(smiles, silent=False)
         #x_morfeus = smiles_to_morfeus(smiles, silent=False, path = self.pth)
         #graphs = [smiles_to_graph(smi, y=y.type(torch.LongTensor)) for smi, y in tqdm(zip(smiles, y))]
         #x_acsf = smiles_to_acsf(smiles, silent=False)
@@ -128,16 +128,38 @@ class MasterDataset:
         #x_acsf = smiles_to_acsf(smiles)
         # print('new part finished')
         
+        #pca = PCA(n_components=512, svd_solver="randomized", random_state=42)
+        #if len(x) < 512: #only for preprocess demo
+         #   pca = PCA(n_components=len(x),  random_state=42)
+        #x_512 = pca.fit_transform(x)
+        #x_256 = x_512[:, :256]
+        #x_128 = x_512[:, :128]
 
         torch.save(index_smiles, os.path.join(self.pth, 'index_smiles'))
         torch.save(smiles_index, os.path.join(self.pth, 'smiles_index'))
         torch.save(smiles, os.path.join(self.pth, 'smiles'))
         torch.save(x, os.path.join(self.pth, 'x'))
+        #torch.save(x_512, os.path.join(self.pth, 'x_512'))
+        #torch.save(x_256, os.path.join(self.pth, 'x_256'))
+        #torch.save(x_128, os.path.join(self.pth, 'x_128'))
         torch.save(y, os.path.join(self.pth, 'y'))
-        #torch.save(x_llm_embedding, os.path.join(self.pth, 'x_llm_embedding'))
+        #x_ecfp = torch.load(os.path.join(self.pth, 'x'), weights_only=False)#[:var_len]
+        #x_maccs = torch.load(os.path.join(self.pth, 'x_maccs'), weights_only=False)#[:var_len]
+        #x = np.concatenate((x_ecfp,  x_maccs, ), axis=1)
+        #x = np.pad(x, ((0, 0), (0, 9)), mode='constant')#pad to 1200 len on axis 1 for self-attention
+        #pca768 = PCA(n_components=768, svd_solver="randomized", random_state=42)
+        #if len(x) < 768: #for demo preprocessing
+         #   pca768 = PCA(n_components=len(x), svd_solver="randomized", random_state=42)
+        #mm_768 = pca768.fit_transform(x)
+        #mm_512 = mm_768[:, :512]
+        #mm_256 = mm_768[:, :256]
+        #torch.save(mm_768, os.path.join(self.pth, 'mm_768'))
+        #torch.save(mm_512, os.path.join(self.pth, 'mm_512'))
+        #torch.save(mm_256, os.path.join(self.pth, 'mm_256'))
+        torch.save(x_llm_embedding, os.path.join(self.pth, 'x_llm_embedding'))
         #torch.save(x_roberta_embedding, os.path.join(self.pth, 'x_roberta_embedding'))
         #torch.save(x_morfeus, os.path.join(self.pth, 'x_morfeus'))
-        torch.save(x_maccs, os.path.join(self.pth, 'x_maccs'))
+        #torch.save(x_maccs, os.path.join(self.pth, 'x_maccs'))
         #torch.save(x_acsf, os.path.join(self.pth, 'x_acsf'))
         #torch.save(graphs, os.path.join(self.pth, 'graphs'))
         print('processing done')
@@ -145,7 +167,7 @@ class MasterDataset:
         from collections import OrderedDict
         print('Loading data ... ', flush=True, file=sys.stderr)
         index_smiles = torch.load(os.path.join(self.pth, 'index_smiles'), weights_only=False)
-        var_len = len(index_smiles)
+        var_len = len(index_smiles) #cuts arrays to length of index_smiles. Usually useless, but can be changed (len(index_smiles)/2 for example ) to test smaller screening space
         index_smiles = torch.load(os.path.join(self.pth, 'index_smiles'), weights_only=False)#[:var_len]
         index_smiles = OrderedDict(list(index_smiles.items())[:var_len])
         smiles_index = torch.load(os.path.join(self.pth, 'smiles_index'), weights_only=False)#[:var_len]
@@ -180,9 +202,20 @@ class MasterDataset:
             x_maccs = torch.load(os.path.join(self.pth, 'x_maccs'), weights_only=False)[:var_len]
             x = np.concatenate((x_ecfp,  x_maccs, ), axis=1)
             x = np.pad(x, ((0, 0), (0, 9)), mode='constant')#pad to 1200 len on axis 1 for self-attention 
+        elif self.representation == 'x_512':
+             x = torch.load(os.path.join(self.pth, 'x_512'), weights_only=False)[:var_len]
+        elif self.representation == 'x_256':
+             x = torch.load(os.path.join(self.pth, 'x_256'), weights_only=False)[:var_len]
+        elif self.representation == 'x_128':
+             x = torch.load(os.path.join(self.pth, 'x_128'), weights_only=False)[:var_len]
+        elif self.representation == 'mm_768':
+            x =  torch.load(os.path.join(self.pth, 'mm_768'), weights_only=False)
+        elif self.representation == 'mm_512':
+            x =  torch.load(os.path.join(self.pth, 'mm_512'), weights_only=False)
+        elif self.representation == 'mm_256':
+            x =  torch.load(os.path.join(self.pth, 'mm_256'), weights_only=False)
         else:
             x = torch.load(os.path.join(self.pth, 'x'), weights_only=False)[:var_len]
-       
         graphs = 1 #torch.load(os.path.join(self.pth, 'graphs'), weights_only=False)[:var_len]
         print('loading done')
         #return OrderedDict(list(smiles_index.items())[:20]), OrderedDict(list(index_smiles.items())[:20]), smiles[:20], x[:20], y[:20], graphs[:20]
@@ -215,6 +248,7 @@ class MasterDataset:
         elif self.representation == 'smiles':
             return self.tokenize(self.smiles[idx]), self.y[idx], self.smiles[idx]
         else:
+            print(len(self.x), len(self.y), len(self.smiles)) # len(self.x_acsf))
             return self.x[idx], self.y[idx], self.smiles[idx]
        
 
