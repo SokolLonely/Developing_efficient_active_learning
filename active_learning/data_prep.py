@@ -115,11 +115,11 @@ class MasterDataset:
         x = smiles_to_ecfp(smiles, silent=False)
         y = torch.tensor(df.y.tolist())
         #x_roberta_embedding = smiles_to_chemberta_embeddings(smiles, silent=False)
-        print('chemberta started')
-        x_llm_embedding = smiles_to_chemgpt_embeddings(smiles, silent=False)
-        print('maccs started')
+        #print('chemberta started')
+        #x_llm_embedding = smiles_to_chemgpt_embeddings(smiles, silent=False)
+        #print('maccs started')
         #x_maccs = smiles_to_maccs(smiles, silent=False)
-        #x_morfeus = smiles_to_morfeus(smiles, silent=False, path = self.pth)
+        x_morfeus = smiles_to_morfeus(smiles, silent=False, path = self.pth) #it is mordred not morfeus
         #graphs = [smiles_to_graph(smi, y=y.type(torch.LongTensor)) for smi, y in tqdm(zip(smiles, y))]
         #x_acsf = smiles_to_acsf(smiles, silent=False)
         # print('new part started') 
@@ -128,35 +128,35 @@ class MasterDataset:
         #x_acsf = smiles_to_acsf(smiles)
         # print('new part finished')
         
-        #pca = PCA(n_components=512, svd_solver="randomized", random_state=42)
-        #if len(x) < 512: #only for preprocess demo
-         #   pca = PCA(n_components=len(x),  random_state=42)
-        #x_512 = pca.fit_transform(x)
-        #x_256 = x_512[:, :256]
-        #x_128 = x_512[:, :128]
+        # pca = PCA(n_components=512, svd_solver="randomized", random_state=42)
+        # if len(x) < 512: #only for preprocess demo
+        #     pca = PCA(n_components=len(x),  random_state=42)
+        # x_512 = pca.fit_transform(x)
+        # x_256 = x_512[:, :256]
+        # x_128 = x_512[:, :128]
 
         torch.save(index_smiles, os.path.join(self.pth, 'index_smiles'))
         torch.save(smiles_index, os.path.join(self.pth, 'smiles_index'))
         torch.save(smiles, os.path.join(self.pth, 'smiles'))
-        torch.save(x, os.path.join(self.pth, 'x'))
-        #torch.save(x_512, os.path.join(self.pth, 'x_512'))
-        #torch.save(x_256, os.path.join(self.pth, 'x_256'))
-        #torch.save(x_128, os.path.join(self.pth, 'x_128'))
+        #torch.save(x, os.path.join(self.pth, 'x'))
+        # torch.save(x_512, os.path.join(self.pth, 'x_512'))
+        # torch.save(x_256, os.path.join(self.pth, 'x_256'))
+        # torch.save(x_128, os.path.join(self.pth, 'x_128'))
         torch.save(y, os.path.join(self.pth, 'y'))
-        #x_ecfp = torch.load(os.path.join(self.pth, 'x'), weights_only=False)#[:var_len]
-        #x_maccs = torch.load(os.path.join(self.pth, 'x_maccs'), weights_only=False)#[:var_len]
-        #x = np.concatenate((x_ecfp,  x_maccs, ), axis=1)
-        #x = np.pad(x, ((0, 0), (0, 9)), mode='constant')#pad to 1200 len on axis 1 for self-attention
-        #pca768 = PCA(n_components=768, svd_solver="randomized", random_state=42)
-        #if len(x) < 768: #for demo preprocessing
-         #   pca768 = PCA(n_components=len(x), svd_solver="randomized", random_state=42)
-        #mm_768 = pca768.fit_transform(x)
-        #mm_512 = mm_768[:, :512]
-        #mm_256 = mm_768[:, :256]
-        #torch.save(mm_768, os.path.join(self.pth, 'mm_768'))
-        #torch.save(mm_512, os.path.join(self.pth, 'mm_512'))
-        #torch.save(mm_256, os.path.join(self.pth, 'mm_256'))
-        torch.save(x_llm_embedding, os.path.join(self.pth, 'x_llm_embedding'))
+        # x_ecfp = torch.load(os.path.join(self.pth, 'x'), weights_only=False)#[:var_len]
+        # x_maccs = torch.load(os.path.join(self.pth, 'x_maccs'), weights_only=False)#[:var_len]
+        # x = np.concatenate((x_ecfp,  x_maccs, ), axis=1)
+        # x = np.pad(x, ((0, 0), (0, 9)), mode='constant')#pad to 1200 len on axis 1 for self-attention
+        # pca768 = PCA(n_components=768, svd_solver="randomized", random_state=42)
+        # if len(x) < 768: #for demo preprocessing
+        #     pca768 = PCA(n_components=len(x), svd_solver="randomized", random_state=42)
+        # mm_768 = pca768.fit_transform(x)
+        # mm_512 = mm_768[:, :512]
+        # mm_256 = mm_768[:, :256]
+        # torch.save(mm_768, os.path.join(self.pth, 'mm_768'))
+        # torch.save(mm_512, os.path.join(self.pth, 'mm_512'))
+        # torch.save(mm_256, os.path.join(self.pth, 'mm_256'))
+        # torch.save(x_llm_embedding, os.path.join(self.pth, 'x_llm_embedding'))
         #torch.save(x_roberta_embedding, os.path.join(self.pth, 'x_roberta_embedding'))
         #torch.save(x_morfeus, os.path.join(self.pth, 'x_morfeus'))
         #torch.save(x_maccs, os.path.join(self.pth, 'x_maccs'))

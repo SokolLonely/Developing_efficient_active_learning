@@ -23,9 +23,9 @@ from tqdm.auto import trange
 #from sklearn.ensemble import RandomForestClassifier
 #import datamol as dm
 #from active_learning.hyperopt import optimize_hyperparameters
-#from transformers import AutoTokenizer, AutoModelForSequenceClassification
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from sklearn.metrics import accuracy_score
-#from transformers import DataCollatorWithPadding
+from transformers import DataCollatorWithPadding
 import pandas as pd
 class MLP(torch.nn.Module): 
     def __init__(self, in_feats: int = 1024, n_hidden: int = 1024,function = 'relu', n_out: int = 2, n_layers: int = 3, seed: int = 42,
@@ -350,11 +350,11 @@ class EarlyStopping:
             print(f"{val_loss}> {self.best_loss - self.min_delta}")
             if self.counter >= self.patience:
                 self.early_stop = True
-#from transformers import TrainingArguments, Trainer
+from transformers import TrainingArguments, Trainer
 class Model(torch.nn.Module):
     def __init__(self, architecture: str, n_hidden, n_layers=3, function = 'relu', epochs = 50, **kwargs):
         super().__init__()
-        #assert architecture in ['gcn', 'mlp', 'gat', 'gin',  'chembert', 'morfeus_mlp', 'only_morfeus', 'mlp2048', 'robert768', 'chemgpt', 'acsf', 'maccs']
+        #assert architecture in ['gcn', 'mlp', 'gat', 'gin',  'chemberta', 'morfeus_mlp', 'only_morfeus', 'mlp2048', 'robert768', 'chemgpt', 'acsf', 'maccs']
         self.architecture = architecture
 
 # Default kwargs
@@ -388,7 +388,7 @@ class Model(torch.nn.Module):
             "mm_256":    (MLP, {**common_kwargs, "n_hidden": n_hidden, "in_feats": 256}),
 }
 
-        if architecture == "chembert":
+        if architecture == "chemberta":
                 self.model = Chemberta(**kwargs)
                 self.training_args = TrainingArguments(
                     output_dir="./chemberta-finetuned",
@@ -415,7 +415,7 @@ class Model(torch.nn.Module):
         self.device_type = "cuda" if torch.cuda.is_available() else "cpu"
         self.device = torch.device(self.device_type)
         self.loss_fn = torch.nn.NLLLoss()
-        if self.architecture != 'chembert':
+        if self.architecture != 'chemberta':
         # Move the whole model to the gpu
             self.model = self.model.to(self.device)
             self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.model.lr,
@@ -429,7 +429,7 @@ class Model(torch.nn.Module):
         self.epochs, self.epoch = self.model.epochs, 0
 
     def train(self, dataloader: DataLoader, epochs: int = None, verbose: bool = True) -> None:
-      if self.architecture != 'chembert':
+      if self.architecture != 'chemberta':
         bar = trange(self.epochs if epochs is None else epochs, disable=not verbose)
         scaler = torch.cuda.amp.GradScaler()
         print()
@@ -509,7 +509,7 @@ class Model(torch.nn.Module):
         :param dataloader: Torch geometric data loader with data
         :return: A 1D-tensors
         """
-      if architecture != 'chembert':
+      if architecture != 'chemberta':
         y_hats = torch.tensor([]).to(self.device)
         with torch.no_grad():
             with torch.autocast(device_type=self.device_type, dtype=torch.bfloat16):
@@ -545,14 +545,14 @@ class Ensemble(torch.nn.Module):
     """ Ensemble of GCNs"""
     def __init__(self, ensemble_size: int = 10, seed: int = 0,n_layers =3, n_hidden = 1024, function = 'relu',epochs = 50, architecture: str = 'mlp', **kwargs) -> None:
         self.ensemble_size = ensemble_size
-        if architecture == 'chembert':
+        if architecture == 'chemberta':
             self.ensemble_size = 1
         self.architecture = architecture
         self.seed = seed
         self.epochs = epochs
         self.n_layers = n_layers
         rng = np.random.default_rng(seed=seed)
-        self.seeds = rng.integers(0, 1000, ensemble_size)
+        self.seeds = rng.integers(0, 1000, self.ensemble_size)
         self.models = {i: Model(seed=s, architecture=architecture, n_layers =n_layers, n_hidden = n_hidden, epochs = epochs, function = function, **kwargs) for i, s in enumerate(self.seeds)}
 
     def optimize_hyperparameters(self, x, y: DataLoader, **kwargs):
@@ -567,9 +567,9 @@ class Ensemble(torch.nn.Module):
 
     def predict(self, dataloader, architecture, **kwargs) -> Tensor:
        # """ logits_N_K_C = [N, num_inference_samples, num_classes] """
-       # if architecture != 'chembert':
+       # if architecture != 'chemberta':
             raw_logits_N_K_C = [m.predict(dataloader, architecture) for m in self.models.values()]
-            if architecture != 'chembert':
+            if architecture != 'chemberta':
                 logits_N_K_C = torch.stack(raw_logits_N_K_C, 1)  # [N, num_inference_samples, num_classes]
                 return logits_N_K_C#64, 10, 2
             else:

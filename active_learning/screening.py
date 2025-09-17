@@ -50,7 +50,7 @@ def active_learning(n_start: int = 64, acquisition_method: str = 'exploration', 
         "rf": "ecfp",
         "mlp2048": "ecfp",
         "amlp": "ecfp",
-        "chembert": "smiles",
+        "chemberta": "smiles",
         "morfeus_mlp": "morfeus",
         "only_morfeus": "only_morfeus",
         "robert768": "robert768",
@@ -158,7 +158,7 @@ def active_learning(n_start: int = 64, acquisition_method: str = 'exploration', 
 
             screen_logits_N_K_C = M.predict(screen_loader, architecture)
             eval_screen.eval(screen_logits_N_K_C, y_screen, architecture)
-        # elif architecture == 'chembert':
+        # elif architecture == 'chemberta':
         #     print('training chembert')
         #     if retrain or cycle == 0:
         #         model_name = "deepchem/chemberta-77m-mlm"
