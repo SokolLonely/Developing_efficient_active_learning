@@ -58,8 +58,7 @@
               "RelativeToolTip": "active_learning\\screening.py",
               "ViewState": "AgIAAC0AAAAAAAAAAADgv0IAAAAgAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.002457|",
-              "WhenOpened": "2025-09-12T14:21:35.645Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-09-12T14:21:35.645Z"
             },
             {
               "$type": "Document",
@@ -71,8 +70,7 @@
               "RelativeToolTip": "experiments\\preprocess_demo.py",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABEAAAAiAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.002457|",
-              "WhenOpened": "2025-08-21T16:24:47.256Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-08-21T16:24:47.256Z"
             },
             {
               "$type": "Document",
@@ -84,8 +82,7 @@
               "RelativeToolTip": "active_learning\\utils.py",
               "ViewState": "AgIAABcBAAAAAAAAAADgv1EBAAAYAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.002457|",
-              "WhenOpened": "2025-08-20T18:21:16.343Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-08-20T18:21:16.343Z"
             },
             {
               "$type": "Document",
@@ -97,8 +94,7 @@
               "RelativeToolTip": "active_learning\\data_prep.py",
               "ViewState": "AgIAAH8AAAAAAAAAAAAawJQAAAAgAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.002457|",
-              "WhenOpened": "2025-08-20T17:40:12.201Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-08-20T17:40:12.201Z"
             },
             {
               "$type": "Document",
@@ -110,8 +106,7 @@
               "RelativeToolTip": "experiments\\main_rf.py",
               "ViewState": "AgIAACcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.002457|",
-              "WhenOpened": "2025-08-20T17:36:42.296Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-08-20T17:36:42.296Z"
             },
             {
               "$type": "Document",
@@ -123,8 +118,7 @@
               "RelativeToolTip": "experiments\\preprocess_data.py",
               "ViewState": "AgIAABsAAAAAAAAAAAAAACoAAAAnAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.002457|",
-              "WhenOpened": "2025-08-20T17:35:08.108Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-08-20T17:35:08.108Z"
             },
             {
               "$type": "Document",
@@ -136,8 +130,7 @@
               "RelativeToolTip": "active_learning\\data_handler.py",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAADUAAAAdAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.002457|",
-              "WhenOpened": "2025-08-20T17:22:35.803Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-08-20T17:22:35.803Z"
             },
             {
               "$type": "Document",
@@ -149,8 +142,7 @@
               "RelativeToolTip": "active_learning\\nn.py",
               "ViewState": "AgIAAF8AAAAAAAAAAADgv3MAAAAzAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.002457|",
-              "WhenOpened": "2025-08-20T04:06:13.628Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-08-20T04:06:13.628Z"
             }
           ]
         }

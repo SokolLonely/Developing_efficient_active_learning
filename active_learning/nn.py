@@ -352,7 +352,7 @@ class EarlyStopping:
                 self.early_stop = True
 from transformers import TrainingArguments, Trainer
 class Model(torch.nn.Module):
-    def __init__(self, architecture: str, n_hidden, n_layers=3, function = 'relu', epochs = 50, **kwargs):
+    def __init__(self, architecture: str, n_hidden, n_layers=3, function = 'relu', epochs = 50, lr = 3e-4, **kwargs):
         super().__init__()
         #assert architecture in ['gcn', 'mlp', 'gat', 'gin',  'chemberta', 'morfeus_mlp', 'only_morfeus', 'mlp2048', 'robert768', 'chemgpt', 'acsf', 'maccs']
         self.architecture = architecture
@@ -362,6 +362,8 @@ class Model(torch.nn.Module):
         n_layers=n_layers,
         function=function,
         epochs=epochs,
+        n_hidden = n_hidden,
+        lr = lr,
         )
 
         ARCH_PARAMS = {
@@ -386,6 +388,10 @@ class Model(torch.nn.Module):
             "mm_768":    (MLP, {**common_kwargs, "n_hidden": n_hidden, "in_feats": 768}),
             "mm_512":    (MLP, {**common_kwargs, "n_hidden": n_hidden, "in_feats": 512}),
             "mm_256":    (MLP, {**common_kwargs, "n_hidden": n_hidden, "in_feats": 256}),
+            "x4":        (MLP, {**common_kwargs, "n_hidden": n_hidden, "in_feats": 2048}),
+            "x4_1024":   (MLP, {**common_kwargs, "n_hidden": n_hidden, "in_feats": 1024}),
+            "x4_768":    (MLP, {**common_kwargs, "n_hidden": n_hidden, "in_feats": 768}),
+
 }
 
         if architecture == "chemberta":
@@ -543,7 +549,7 @@ class Model(torch.nn.Module):
            
 class Ensemble(torch.nn.Module):
     """ Ensemble of GCNs"""
-    def __init__(self, ensemble_size: int = 10, seed: int = 0,n_layers =3, n_hidden = 1024, function = 'relu',epochs = 50, architecture: str = 'mlp', **kwargs) -> None:
+    def __init__(self, ensemble_size: int = 10, seed: int = 0,n_layers =3, n_hidden = 1024, function = 'relu',epochs = 50, architecture: str = 'mlp', lr =3e-4, **kwargs) -> None:
         self.ensemble_size = ensemble_size
         if architecture == 'chemberta':
             self.ensemble_size = 1
@@ -553,7 +559,7 @@ class Ensemble(torch.nn.Module):
         self.n_layers = n_layers
         rng = np.random.default_rng(seed=seed)
         self.seeds = rng.integers(0, 1000, self.ensemble_size)
-        self.models = {i: Model(seed=s, architecture=architecture, n_layers =n_layers, n_hidden = n_hidden, epochs = epochs, function = function, **kwargs) for i, s in enumerate(self.seeds)}
+        self.models = {i: Model(seed=s, architecture=architecture, n_layers =n_layers, n_hidden = n_hidden, epochs = epochs,lr = lr, function = function, **kwargs) for i, s in enumerate(self.seeds)}
 
     def optimize_hyperparameters(self, x, y: DataLoader, **kwargs):
         # raise NotImplementedError

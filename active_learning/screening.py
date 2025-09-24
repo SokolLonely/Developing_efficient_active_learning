@@ -27,7 +27,7 @@ TRAINING_BATCH_SIZE = 64
 def active_learning(n_start: int = 64, acquisition_method: str = 'exploration', max_screen_size: int = None,
                     batch_size: int = 16,n_layers = 3, n_hidden = 1024,  function = 'relu', epochs = 50, architecture: str = 'gcn', seed: int = 0, bias: str = 'random',
                     optimize_hyperparameters: bool = False, ensemble_size: int = 10, retrain: bool = True,
-                    anchored: bool = True, dataset: str = 'ALDH1', scrambledx: bool = False, corrupt: int = False,
+                    anchored: bool = True, dataset: str = 'ALDH1', scrambledx: bool = False, corrupt: int = False, lr : float = 3e-4,
                     scrambledx_seed: int = 1) -> pd.DataFrame:
 
     # :param n_start: number of molecules to start out with
@@ -65,6 +65,9 @@ def active_learning(n_start: int = 64, acquisition_method: str = 'exploration', 
         "mm_768": "mm_768",
         "mm_512": "mm_512",
         "mm_256": "mm_256",
+        "x4": "x4",
+        "x4_1024": "x4_1024",
+        "x4_768" : "x4_768",
     }
     representation = arch_to_repr.get(architecture, "graph")
 
@@ -143,7 +146,7 @@ def active_learning(n_start: int = 64, acquisition_method: str = 'exploration', 
             # Initiate and train the model (optimize if specified)
             print("Training model")
             if retrain or cycle == 0:
-                M = Ensemble(seed=seed, ensemble_size=ensemble_size,epochs = epochs, architecture=architecture,n_layers=n_layers, n_hidden = n_hidden, function = function, anchored=anchored)
+                M = Ensemble(seed=seed, ensemble_size=ensemble_size,epochs = epochs, architecture=architecture,n_layers=n_layers, n_hidden = n_hidden, lr = lr, function = function, anchored=anchored)
                 if cycle == 0 and optimize_hyperparameters:
                     M.optimize_hyperparameters(x_train, y_train)
                 M.train(train_loader_balanced, verbose=False)
