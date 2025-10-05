@@ -394,8 +394,6 @@ def smiles_to_soap(smiles: list[str], rCut=6.0, species=["H", "O","C", "N", "S",
     #convert smiles to rdkit atoms
     mols = smiles_to_rdkit_mol(smiles)
     atoms = rdkit_mol_to_ase(mols)
-    # Set up the SOAP descriptor with parameters:
-    # species, rcut, nmax, and lmax
     soap = SOAP(species=species,r_cut=rCut,n_max=nMax,l_max=lMax)
     sp = [soap.create(s) for s in tqdm(atoms, disable=silent)]
     if not to_array:
@@ -506,7 +504,7 @@ def smiles_to_ecfp(smiles: list[str], radius: int = 3, nbits: int = 1024, silent
         output.append(arr)
 
     return np.asarray(output)
-def smiles_to_morfeus(smiles: list[str], silent: bool = True, to_array: bool = True, path = '') -> pd.DataFrame:
+def smiles_to_morfeus(smiles: list[str], silent: bool = True, to_array: bool = True, path = '') -> pd.DataFrame: #this is mordred
     from rdkit import Chem
     from rdkit.Chem import AllChem
     if type(smiles) is str:
