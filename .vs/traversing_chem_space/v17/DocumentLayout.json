@@ -3,12 +3,20 @@
   "WorkspaceRootPath": "C:\\Users\\simon\\source\\repos\\nibi_files\\traversing_chem_space\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\simon\\source\\repos\\nibi_files\\traversing_chem_space\\experiments\\demo.py||{8B382828-6202-11D1-8870-0000F87579D2}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:experiments\\demo.py||{8B382828-6202-11D1-8870-0000F87579D2}"
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\simon\\source\\repos\\nibi_files\\traversing_chem_space\\active_learning\\screening.py||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:active_learning\\screening.py||{8B382828-6202-11D1-8870-0000F87579D2}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\simon\\source\\repos\\nibi_files\\traversing_chem_space\\active_learning\\nn.py||{8B382828-6202-11D1-8870-0000F87579D2}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:active_learning\\nn.py||{8B382828-6202-11D1-8870-0000F87579D2}"
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\simon\\source\\repos\\nibi_files\\traversing_chem_space\\active_learning\\acquisition.py||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:active_learning\\acquisition.py||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\simon\\source\\repos\\nibi_files\\traversing_chem_space\\experiments\\process_results.py||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:experiments\\process_results.py||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\simon\\source\\repos\\nibi_files\\traversing_chem_space\\experiments\\hypers_main.py||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:experiments\\hypers_main.py||{8B382828-6202-11D1-8870-0000F87579D2}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\simon\\source\\repos\\nibi_files\\traversing_chem_space\\active_learning\\data_handler.py||{8B382828-6202-11D1-8870-0000F87579D2}",
@@ -19,8 +27,8 @@
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:experiments\\preprocess_data.py||{8B382828-6202-11D1-8870-0000F87579D2}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\simon\\source\\repos\\nibi_files\\traversing_chem_space\\active_learning\\screening.py||{8B382828-6202-11D1-8870-0000F87579D2}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:active_learning\\screening.py||{8B382828-6202-11D1-8870-0000F87579D2}"
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\simon\\source\\repos\\nibi_files\\traversing_chem_space\\experiments\\main_rf.py||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:experiments\\main_rf.py||{8B382828-6202-11D1-8870-0000F87579D2}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\simon\\source\\repos\\nibi_files\\traversing_chem_space\\active_learning\\data_prep.py||{8B382828-6202-11D1-8870-0000F87579D2}",
@@ -31,12 +39,16 @@
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:active_learning\\utils.py||{8B382828-6202-11D1-8870-0000F87579D2}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\simon\\source\\repos\\nibi_files\\traversing_chem_space\\experiments\\main_rf.py||{8B382828-6202-11D1-8870-0000F87579D2}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:experiments\\main_rf.py||{8B382828-6202-11D1-8870-0000F87579D2}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\simon\\source\\repos\\nibi_files\\traversing_chem_space\\experiments\\preprocess_demo.py||{8B382828-6202-11D1-8870-0000F87579D2}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:experiments\\preprocess_demo.py||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\simon\\source\\repos\\nibi_files\\traversing_chem_space\\experiments\\demo.py||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:experiments\\demo.py||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\simon\\source\\repos\\nibi_files\\traversing_chem_space\\active_learning\\nn.py||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:active_learning\\nn.py||{8B382828-6202-11D1-8870-0000F87579D2}"
     }
   ],
   "DocumentGroupContainers": [
@@ -46,7 +58,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 1,
+          "SelectedChildIndex": 5,
           "Children": [
             {
               "$type": "Bookmark",
@@ -54,7 +66,46 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 2,
+              "Title": "process_results.py",
+              "DocumentMoniker": "C:\\Users\\simon\\source\\repos\\nibi_files\\traversing_chem_space\\experiments\\process_results.py",
+              "RelativeDocumentMoniker": "experiments\\process_results.py",
+              "ToolTip": "C:\\Users\\simon\\source\\repos\\nibi_files\\traversing_chem_space\\experiments\\process_results.py",
+              "RelativeToolTip": "experiments\\process_results.py",
+              "ViewState": "AgIAAIMBAAAAAAAAAAAAAIEBAAAgAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.002457|",
+              "WhenOpened": "2025-10-06T00:34:14.45Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "hypers_main.py",
+              "DocumentMoniker": "C:\\Users\\simon\\source\\repos\\nibi_files\\traversing_chem_space\\experiments\\hypers_main.py",
+              "RelativeDocumentMoniker": "experiments\\hypers_main.py",
+              "ToolTip": "C:\\Users\\simon\\source\\repos\\nibi_files\\traversing_chem_space\\experiments\\hypers_main.py",
+              "RelativeToolTip": "experiments\\hypers_main.py",
+              "ViewState": "AgIAAB4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.002457|",
+              "WhenOpened": "2025-10-06T00:34:09.419Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "acquisition.py",
+              "DocumentMoniker": "C:\\Users\\simon\\source\\repos\\nibi_files\\traversing_chem_space\\active_learning\\acquisition.py",
+              "RelativeDocumentMoniker": "active_learning\\acquisition.py",
+              "ToolTip": "C:\\Users\\simon\\source\\repos\\nibi_files\\traversing_chem_space\\active_learning\\acquisition.py",
+              "RelativeToolTip": "active_learning\\acquisition.py",
+              "ViewState": "AgIAALcAAAAAAAAAAADgvx4AAABeAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.002457|",
+              "WhenOpened": "2025-10-05T19:07:29.959Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 10,
               "Title": "demo.py",
               "DocumentMoniker": "C:\\Users\\simon\\source\\repos\\nibi_files\\traversing_chem_space\\experiments\\demo.py",
               "RelativeDocumentMoniker": "experiments\\demo.py",
@@ -67,19 +118,20 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 0,
               "Title": "screening.py",
               "DocumentMoniker": "C:\\Users\\simon\\source\\repos\\nibi_files\\traversing_chem_space\\active_learning\\screening.py",
               "RelativeDocumentMoniker": "active_learning\\screening.py",
               "ToolTip": "C:\\Users\\simon\\source\\repos\\nibi_files\\traversing_chem_space\\active_learning\\screening.py",
               "RelativeToolTip": "active_learning\\screening.py",
-              "ViewState": "AgIAAC0AAAAAAAAAAADgv0IAAAAgAAAAAAAAAA==",
+              "ViewState": "AgIAAMEAAAAAAAAAAAAiwNUAAAAcAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.002457|",
-              "WhenOpened": "2025-09-12T14:21:35.645Z"
+              "WhenOpened": "2025-09-12T14:21:35.645Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 9,
               "Title": "preprocess_demo.py",
               "DocumentMoniker": "C:\\Users\\simon\\source\\repos\\nibi_files\\traversing_chem_space\\experiments\\preprocess_demo.py",
               "RelativeDocumentMoniker": "experiments\\preprocess_demo.py",
@@ -87,35 +139,38 @@
               "RelativeToolTip": "experiments\\preprocess_demo.py",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABEAAAAiAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.002457|",
-              "WhenOpened": "2025-08-21T16:24:47.256Z"
+              "WhenOpened": "2025-08-21T16:24:47.256Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 8,
               "Title": "utils.py",
               "DocumentMoniker": "C:\\Users\\simon\\source\\repos\\nibi_files\\traversing_chem_space\\active_learning\\utils.py",
               "RelativeDocumentMoniker": "active_learning\\utils.py",
               "ToolTip": "C:\\Users\\simon\\source\\repos\\nibi_files\\traversing_chem_space\\active_learning\\utils.py",
               "RelativeToolTip": "active_learning\\utils.py",
-              "ViewState": "AgIAABcBAAAAAAAAAADgv1EBAAAYAAAAAAAAAA==",
+              "ViewState": "AgIAAGMDAAAAAAAAAADgv2oDAAAOAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.002457|",
-              "WhenOpened": "2025-08-20T18:21:16.343Z"
+              "WhenOpened": "2025-08-20T18:21:16.343Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 7,
               "Title": "data_prep.py",
               "DocumentMoniker": "C:\\Users\\simon\\source\\repos\\nibi_files\\traversing_chem_space\\active_learning\\data_prep.py",
               "RelativeDocumentMoniker": "active_learning\\data_prep.py",
               "ToolTip": "C:\\Users\\simon\\source\\repos\\nibi_files\\traversing_chem_space\\active_learning\\data_prep.py",
               "RelativeToolTip": "active_learning\\data_prep.py",
-              "ViewState": "AgIAAH8AAAAAAAAAAAAawJQAAAAgAAAAAAAAAA==",
+              "ViewState": "AgIAAAkBAAAAAAAAAAAawBcBAAAJAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.002457|",
-              "WhenOpened": "2025-08-20T17:40:12.201Z"
+              "WhenOpened": "2025-08-20T17:40:12.201Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 6,
               "Title": "main_rf.py",
               "DocumentMoniker": "C:\\Users\\simon\\source\\repos\\nibi_files\\traversing_chem_space\\experiments\\main_rf.py",
               "RelativeDocumentMoniker": "experiments\\main_rf.py",
@@ -123,11 +178,12 @@
               "RelativeToolTip": "experiments\\main_rf.py",
               "ViewState": "AgIAACcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.002457|",
-              "WhenOpened": "2025-08-20T17:36:42.296Z"
+              "WhenOpened": "2025-08-20T17:36:42.296Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 5,
               "Title": "preprocess_data.py",
               "DocumentMoniker": "C:\\Users\\simon\\source\\repos\\nibi_files\\traversing_chem_space\\experiments\\preprocess_data.py",
               "RelativeDocumentMoniker": "experiments\\preprocess_data.py",
@@ -140,26 +196,26 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 4,
               "Title": "data_handler.py",
               "DocumentMoniker": "C:\\Users\\simon\\source\\repos\\nibi_files\\traversing_chem_space\\active_learning\\data_handler.py",
               "RelativeDocumentMoniker": "active_learning\\data_handler.py",
               "ToolTip": "C:\\Users\\simon\\source\\repos\\nibi_files\\traversing_chem_space\\active_learning\\data_handler.py",
               "RelativeToolTip": "active_learning\\data_handler.py",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAUAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAADkAAAAAAAAAAAAAAAUAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.002457|",
               "WhenOpened": "2025-08-20T17:22:35.803Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 11,
               "Title": "nn.py",
               "DocumentMoniker": "C:\\Users\\simon\\source\\repos\\nibi_files\\traversing_chem_space\\active_learning\\nn.py",
               "RelativeDocumentMoniker": "active_learning\\nn.py",
               "ToolTip": "C:\\Users\\simon\\source\\repos\\nibi_files\\traversing_chem_space\\active_learning\\nn.py",
               "RelativeToolTip": "active_learning\\nn.py",
-              "ViewState": "AgIAAEcBAAAAAAAAAADgv04BAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAAgCAAAAAAAAAADgvzcCAAARAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.002457|",
               "WhenOpened": "2025-08-20T04:06:13.628Z",
               "EditorCaption": ""
