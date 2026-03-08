@@ -39,3 +39,4 @@ data/*
 
 # And keep everything inside DEMO
 !data/DEMO/**
+data/DEMO/*/*.xyz
