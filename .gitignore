@@ -41,3 +41,4 @@ data/*
 !data/DEMO/**
 data/DEMO/*/*.xyz
 active_learning_local
+figures/
