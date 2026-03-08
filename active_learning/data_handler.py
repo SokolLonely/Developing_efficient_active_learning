@@ -4,7 +4,11 @@ This script contains the class that manages the data over cycles
 
     - Handler: class that manages getting the start data and adding new samples to it every active learning cycle.
 
+<<<<<<< HEAD
     Author: Simon Ryabinkin, University of Calgary, 2025, modified from Derek van Tilborg, Eindhoven University of Technology, May 2023
+=======
+    Author: Derek van Tilborg, Eindhoven University of Technology, May 2023
+>>>>>>> ce45ae89a9ba1ccab1da2b8c4d3949c24cb50b2e
 
 """
 

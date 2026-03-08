@@ -4,7 +4,11 @@ Code for hyperparamter optimization using bootstrapped n-fold cross-validation.
     - optimize_hyperparameters()
     - k_fold_cross_validation()
 
+<<<<<<< HEAD
 Author: Simon Ryabinkin, University of Calgary, 2025-2026, modified from Derek van Tilborg, Eindhoven University of Technology, May 2023
+=======
+Derek van Tilborg | 06-03-2023 | Eindhoven University of Technology
+>>>>>>> ce45ae89a9ba1ccab1da2b8c4d3949c24cb50b2e
 
 """
 

@@ -10,16 +10,32 @@ import pandas as pd
 from scipy.cluster import hierarchy
 from active_learning.data_prep import MasterDataset, load_hdf5, get_data, split_data, similarity_vectors
 from config import ROOT_DIR
+<<<<<<< HEAD
+=======
+import argparse
+>>>>>>> ce45ae89a9ba1ccab1da2b8c4d3949c24cb50b2e
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 
 if __name__ == '__main__':
+<<<<<<< HEAD
 
     # Process the data
     for dataset in ['ALDH1']:
 
         df = get_data(dataset=dataset)
         df_screen, df_test = split_data(df, screen_size=100000, test_size=20000, dataset=dataset)
+=======
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-size', default=1)
+    args = parser.parse_args()
+    size = float(args.size)
+    # Process the data
+    for dataset in ['ALDH1']:#, 'PKM2', 'VDR']:
+        #break
+        df = get_data(dataset=dataset)
+        df_screen, df_test = split_data(df, screen_size=int(100000*size), test_size=int(20000*size), dataset=dataset)
+>>>>>>> ce45ae89a9ba1ccab1da2b8c4d3949c24cb50b2e
 
         MasterDataset(name='screen', df=df_screen, overwrite=True, dataset=dataset)
         MasterDataset(name='test', df=df_test, overwrite=True, dataset=dataset)
@@ -27,6 +43,7 @@ if __name__ == '__main__':
         df_screen = pd.read_csv(os.path.join(ROOT_DIR, f'data/{dataset}/original/screen.csv'))
         df_test = pd.read_csv(os.path.join(ROOT_DIR, f'data/{dataset}/original/test.csv'))
 
+<<<<<<< HEAD
         similarity_vectors(df_screen, df_test, dataset=dataset)
 
     '''# Perform clustering for each dataset
@@ -34,6 +51,15 @@ if __name__ == '__main__':
         ds_screen = MasterDataset('screen', representation='ecfp', dataset=dataset)
         x_screen, y_screen, smiles_screen = ds_screen.all()
         smiles_index = torch.load(f'data/{dataset}/screen/smiles_index')
+=======
+        #similarity_vectors(df_screen, df_test, dataset=dataset)
+
+    # Perform clustering for each dataset
+    for dataset, tani_cutoffs in zip(['ALDH1'], [[0.80, 0.61]]): #'PKM2', 'VDR',     , [0.80, 0.70], [0.80, 0.60]
+        ds_screen = MasterDataset('screen', representation='ecfp', dataset=dataset)
+        x_screen, y_screen, smiles_screen = ds_screen.all()
+        smiles_index = torch.load(os.path.join(ROOT_DIR, f'data/{dataset}/screen/smiles_index'))
+>>>>>>> ce45ae89a9ba1ccab1da2b8c4d3949c24cb50b2e
         min_supercluster_size = 128
         min_subcluster_size = 64
         n = len(smiles_screen)
@@ -101,7 +127,11 @@ if __name__ == '__main__':
         torch.save(cluster_smiles_with_hits, f'data/{dataset}/screen/starting_clusters')
 
     # Process three other datasets with very few actives as an extra case-study
+<<<<<<< HEAD
     for dataset in ['IDH1', 'ADRB2', 'OPRK1', 'GBA', 'KAT2A', 'FEN1']:
+=======
+    '''for dataset in ['IDH1', 'ADRB2', 'OPRK1', 'GBA', 'KAT2A', 'FEN1']:
+>>>>>>> ce45ae89a9ba1ccab1da2b8c4d3949c24cb50b2e
 
         df = get_data(dataset=dataset)
         df_screen, df_test = split_data(df, screen_size=100000, test_size=20000, dataset=dataset)
@@ -111,3 +141,7 @@ if __name__ == '__main__':
 
         df_screen = pd.read_csv(os.path.join(ROOT_DIR, f'data/{dataset}/original/screen.csv'))
         df_test = pd.read_csv(os.path.join(ROOT_DIR, f'data/{dataset}/original/test.csv'))'''
+<<<<<<< HEAD
+=======
+
+>>>>>>> ce45ae89a9ba1ccab1da2b8c4d3949c24cb50b2e

@@ -2,16 +2,11 @@
 
 This script contains the main active learning loop that runs all experiments.
 
-<<<<<<< HEAD
-    Author: Simon Ryabinkin, University of Calgary, 2025-2026, modified from Derek van Tilborg, Eindhoven University of Technology, May 2023
-=======
     Author: Derek van Tilborg, Eindhoven University of Technology, May 2023
->>>>>>> ce45ae89a9ba1ccab1da2b8c4d3949c24cb50b2e
 
 """
 
 from math import ceil
-import re
 import pandas as pd
 import numpy as np
 #from tqdm.auto import tqdm
@@ -29,55 +24,47 @@ TRAINING_BATCH_SIZE = 64
 
 
 def active_learning(n_start: int = 64, acquisition_method: str = 'exploration', max_screen_size: int = None,
-                    batch_size: int = 16,n_layers = 3, n_hidden = 1024,  function = 'relu', epochs = 50, architecture: str = 'gcn', seed: int = 0, bias: str = 'random',
+                    batch_size: int = 16,n_layers = 3, function = 'relu', epochs = 50, architecture: str = 'gcn', seed: int = 0, bias: str = 'random',
                     optimize_hyperparameters: bool = False, ensemble_size: int = 10, retrain: bool = True,
-                    anchored: bool = True, dataset: str = 'ALDH1', scrambledx: bool = False, corrupt: int = False, lr : float = 3e-4,
+                    anchored: bool = True, dataset: str = 'ALDH1', scrambledx: bool = False, corrupt: int = False,
                     scrambledx_seed: int = 1) -> pd.DataFrame:
-
-    # :param n_start: number of molecules to start out with
-    # :param acquisition_method: acquisition method, as defined in active_learning.acquisition
-    # :param max_screen_size: we stop when this number of molecules has been screened
-    # :param batch_size: number of molecules to add every cycle
-    # :param architecture: 'gcn', 'mlp', or 'rf' #rf is random forest
-    # :param seed: int 1-20
-    # :param bias: 'random', 'small', 'large'
-    # :param optimize_hyperparameters: Bool
-    # :param ensemble_size: number of models in the ensemble, default is 10
-    # :param scrambledx: toggles randomizing the features
-    # :param scrambledx_seed: seed for scrambling the features
-    # :return: dataframe with results
-
+    """
+    :param n_start: number of molecules to start out with
+    :param acquisition_method: acquisition method, as defined in active_learning.acquisition
+    :param max_screen_size: we stop when this number of molecules has been screened
+    :param batch_size: number of molecules to add every cycle
+    :param architecture: 'gcn', 'mlp', or 'rf' #rf is random forest
+    :param seed: int 1-20
+    :param bias: 'random', 'small', 'large'
+    :param optimize_hyperparameters: Bool
+    :param ensemble_size: number of models in the ensemble, default is 10
+    :param scrambledx: toggles randomizing the features
+    :param scrambledx_seed: seed for scrambling the features
+    :return: dataframe with results
+    """
 
     # Load the datasets
-    arch_to_repr = {
-        "mlp": "ecfp",
-        "rf": "ecfp",
-        "mlp2048": "ecfp",
-        "amlp": "ecfp",
-        "chemberta": "smiles",
-        "morfeus_mlp": "morfeus",
-        "only_morfeus": "only_morfeus",
-        "robert768": "robert768",
-        "chemgpt": "chemgpt",
-        "maccs": "maccs",
-        "acsf": "acsf",
-        "mm": "mm",
-        "mmnoatt": "mm",
-        "x_512": "x_512",
-        "x_256": "x_256",
-        "x_128": "x_128",
-        "mm_768": "mm_768",
-        "mm_512": "mm_512",
-        "mm_256": "mm_256",
-        "x4": "x4",
-        "x4_1024": "x4_1024",
-        "x4_768" : "x4_768",
-    }
-    representation = arch_to_repr.get(architecture, "graph")
-
-# Special case for chembert
-    if architecture == "chembert":
-        ensemble_size = 1
+    if architecture in ['mlp', 'rf', 'mlp2048', 'amlp']:
+        representation = 'ecfp'
+    elif architecture in ['chembert']:
+        representation = 'smiles'
+        ensemble_size = 1  
+    elif architecture in ['morfeus_mlp']:
+        representation = 'morfeus'
+    elif architecture in ['only_morfeus']:
+        representation = 'only_morfeus'
+    elif architecture in ['robert768']:
+        representation = 'robert768'
+    elif architecture in ['chemgpt']:
+        representation = 'chemgpt'
+    elif architecture in ['maccs']:
+        representation = 'maccs'
+    elif architecture in ['acsf']:
+        representation = 'acsf'
+    elif architecture in ['mm']:
+        representation = 'mm'
+    else:
+        representation = 'graph'
     
     ds_screen = MasterDataset('screen', representation=representation, dataset=dataset, scramble_x=scrambledx,
                               scramble_x_seed=scrambledx_seed)
@@ -120,10 +107,7 @@ def active_learning(n_start: int = 64, acquisition_method: str = 'exploration', 
         all_train_smiles.append(';'.join(smiles_train.tolist()))
         temp = sum(y_train).item()
         hits_discovered.append(temp-handler.n_false_labels)
-<<<<<<< HEAD
-=======
         #print(f"hits_discovered: {hits_discovered}")
->>>>>>> ce45ae89a9ba1ccab1da2b8c4d3949c24cb50b2e
         hits = smiles_train[np.where(y_train == 1)] 
         total_mols_screened.append(len(y_train))
 
@@ -149,15 +133,11 @@ def active_learning(n_start: int = 64, acquisition_method: str = 'exploration', 
             screen_loader = to_torch_dataloader(x_screen, y_screen,
                                                 batch_size=INFERENCE_BATCH_SIZE,
                                                 shuffle=False, pin_memory=True, architecture=architecture)
-<<<<<<< HEAD
-            
-=======
             #print(data)
->>>>>>> ce45ae89a9ba1ccab1da2b8c4d3949c24cb50b2e
             # Initiate and train the model (optimize if specified)
             print("Training model")
             if retrain or cycle == 0:
-                M = Ensemble(seed=seed, ensemble_size=ensemble_size,epochs = epochs, architecture=architecture,n_layers=n_layers, n_hidden = n_hidden, lr = lr, function = function, anchored=anchored)
+                M = Ensemble(seed=seed, ensemble_size=ensemble_size,epochs = epochs, architecture=architecture,n_layers=n_layers, function = function, anchored=anchored)
                 if cycle == 0 and optimize_hyperparameters:
                     M.optimize_hyperparameters(x_train, y_train)
                 M.train(train_loader_balanced, verbose=False)
@@ -172,10 +152,7 @@ def active_learning(n_start: int = 64, acquisition_method: str = 'exploration', 
 
             screen_logits_N_K_C = M.predict(screen_loader, architecture)
             eval_screen.eval(screen_logits_N_K_C, y_screen, architecture)
-<<<<<<< HEAD
-
-=======
-        # elif architecture == 'chemberta':
+        # elif architecture == 'chembert':
         #     print('training chembert')
         #     if retrain or cycle == 0:
         #         model_name = "deepchem/chemberta-77m-mlm"
@@ -189,7 +166,6 @@ def active_learning(n_start: int = 64, acquisition_method: str = 'exploration', 
 
         #     screen_logits_n_k_c = m.predict(screen_loader)
         #     eval_screen.eval(screen_logits_n_k_c, y_screen)
->>>>>>> ce45ae89a9ba1ccab1da2b8c4d3949c24cb50b2e
         else: #random forest
             print("Training model")
             if retrain or cycle == 0:
