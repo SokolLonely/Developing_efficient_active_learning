@@ -1,0 +1,7 @@
+python 3.9
+
+conda librairies:
+numpy transformers pytorch 
+
+
+pip librairies:

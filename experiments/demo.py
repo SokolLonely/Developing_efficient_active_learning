@@ -26,12 +26,14 @@ if __name__ == '__main__':
     parser.add_argument('-acq', help="Acquisition function ('random', 'exploration', 'exploitation', 'dynamic', "
                                      "'similarity')", default='random')
     parser.add_argument('-bias', help='The level of bias ("random", "small", "large")', default='random')
-    parser.add_argument('-arch', help='The neural network architecture ("gcn", "mlp")', default='chembert')
+    parser.add_argument('-arch', help='The neural network architecture ("gcn", "mlp")', default='mlp')
     parser.add_argument('-dataset', help='The dataset ("ALDH1", "PKM2", "VDR")', default='DEMO')
     parser.add_argument('-retrain', help='Retrain the model every cycle', default='True')
     parser.add_argument('-batch_size', help='How many molecules we select each cycle', default=64)
     parser.add_argument('-n_start', help='How many molecules we have in our starting set (min=2)', default=64)
     parser.add_argument('-anchored', help='Anchor the weights', default='True')
+    parser.add_argument('-corrupt', help='% of mislabeled (1% is 1, not 0.01)', default = 0)
+    parser.add_argument('-n_hidden', default = 1024)
     args = parser.parse_args()
 
     PARAMETERS['acquisition'] = [args.acq]
@@ -42,6 +44,8 @@ if __name__ == '__main__':
     PARAMETERS['batch_size'] = [int(args.batch_size)]
     PARAMETERS['n_start'] = [int(args.n_start)]
     PARAMETERS['anchored'] = [eval(args.anchored)]
+    PARAMETERS['corrupt'] = [int(args.corrupt)]
+    PARAMETERS['n_hidden'] = [int(args.n_hidden)]
     LOG_FILE = args.o
 
     experiments = [dict(zip(PARAMETERS.keys(), v)) for v in itertools.product(*PARAMETERS.values())]
@@ -54,11 +58,14 @@ if __name__ == '__main__':
                                   batch_size=experiment['batch_size'],
                                   architecture=experiment['architecture'],
                                   seed=experiment['seed'],
-                                  epochs = 3, #experiment['epochs'],
+                                  epochs = 1, #experiment['epochs'],
                                   retrain=experiment['retrain'],
                                   anchored=experiment['anchored'],
                                   dataset=experiment['dataset'],
-                                  optimize_hyperparameters=False)
+                                  optimize_hyperparameters=False,
+                                  n_hidden=experiment['n_hidden'],
+                                  
+                                  corrupt = experiment['corrupt']*0.01)#convert to %
 
         # Add the experimental settings to the outfile
         results['acquisition_method'] = experiment['acquisition']
@@ -71,3 +78,9 @@ if __name__ == '__main__':
         results['dataset'] = experiment['dataset']
 
         results.to_csv(LOG_FILE, mode='a', index=False, header=False if os.path.isfile(LOG_FILE) else True)
+        final_hits = results.loc[[7, 13, 19], "hits_discovered"].tolist()
+        sum_hits = sum(final_hits)
+
+        with open("output.txt", "a") as f:
+            fcntl.flock(f, fcntl.LOCK_EX)  
+            f.write(f"{sum_hits}\n")

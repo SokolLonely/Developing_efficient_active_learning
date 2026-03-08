@@ -8,7 +8,7 @@ This script contains all models:
     - Ensemble: Class that ensembles n Model classes. Contains a train() method and an predict() method that outputs
         logits_N_K_C, defined as [N, num_inference_samples, num_classes]. Also has an optimize_hyperparameters() method.
 
-    Author: Derek van Tilborg, Eindhoven University of Technology, May 2023
+    Author: Simon Ryabinkin, University of Calgary, 2025-2026, modified from Derek van Tilborg, Eindhoven University of Technology, May 2023
 
 """
 
@@ -20,15 +20,15 @@ from torch.utils.data import DataLoader
 from torch.nn import functional as F
 from torch_geometric.nn import GCNConv, global_add_pool, BatchNorm, GATConv, GINConv
 from tqdm.auto import trange
-from sklearn.ensemble import RandomForestClassifier
-import datamol as dm
-from active_learning.hyperopt import optimize_hyperparameters
+#from sklearn.ensemble import RandomForestClassifier
+#import datamol as dm
+#from active_learning.hyperopt import optimize_hyperparameters
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from sklearn.metrics import accuracy_score
 from transformers import DataCollatorWithPadding
 import pandas as pd
-class NewMLP(torch.nn.Module): #4 layers, 2 times bigger, gelu
-    def __init__(self, in_feats: int = 1024, n_hidden: int = 1024, n_out: int = 2, n_layers: int = 4, seed: int = 42,
+class MLP(torch.nn.Module): 
+    def __init__(self, in_feats: int = 1024, n_hidden: int = 1024,function = 'relu', n_out: int = 2, n_layers: int = 3, seed: int = 42,
                  lr: float = 3e-4, epochs: int = 50, anchored: bool = True, l2_lambda: float = 3e-4,
                  weight_decay: float = 0):
         super().__init__()
@@ -50,6 +50,7 @@ class NewMLP(torch.nn.Module): #4 layers, 2 times bigger, gelu
         self.out.reset_parameters()
 
     def forward(self, x: Tensor) -> Tensor:
+        
         for lin, norm in zip(self.fc, self.fc_norms):
             x = lin(x)
             x = norm(x)
@@ -91,7 +92,7 @@ class SmilesMLP(torch.nn.Module):
         x = F.log_softmax(x, 1)
 
         return x
-class MLP(torch.nn.Module):
+class AttMLP(torch.nn.Module):
     def __init__(self, in_feats: int = 1024, n_hidden: int = 1024,function = 'relu', n_out: int = 2, n_layers: int = 3, seed: int = 42,
                  lr: float = 3e-4, epochs: int = 50, anchored: bool = True, l2_lambda: float = 3e-4,
                  weight_decay: float = 0):
@@ -109,6 +110,7 @@ class MLP(torch.nn.Module):
             self.func = F.leaky_relu
         self.fc = torch.nn.ModuleList()
         self.fc_norms = torch.nn.ModuleList()
+        self.fc.append(torch.nn.MultiheadAttention(embed_dim=in_feats, num_heads=16, batch_first=True))
         for i in range(n_layers):
             self.fc.append(torch.nn.Linear(in_feats if i == 0 else n_hidden, n_hidden))
             self.fc_norms.append(BatchNorm(n_hidden, allow_single_element=True))
@@ -121,7 +123,9 @@ class MLP(torch.nn.Module):
         self.out.reset_parameters()
 
     def forward(self, x: Tensor) -> Tensor:
-        for lin, norm in zip(self.fc, self.fc_norms):
+        attn = self.fc[0]
+        x, _ = attn(x, x, x)
+        for lin, norm in zip(self.fc[1:], self.fc_norms):
             x = lin(x)
             x = norm(x)
             x = self.func(x)
@@ -348,44 +352,76 @@ class EarlyStopping:
                 self.early_stop = True
 from transformers import TrainingArguments, Trainer
 class Model(torch.nn.Module):
-    def __init__(self, architecture: str,n_layers=3, function = 'relu', epochs = 50, **kwargs):
+    def __init__(self, architecture: str, n_hidden, n_layers=3, function = 'relu', epochs = 50, lr = 3e-4, **kwargs):
         super().__init__()
-        assert architecture in ['gcn', 'mlp', 'gat', 'gin', 'newmlp', 'chembert']
+        #assert architecture in ['gcn', 'mlp', 'gat', 'gin',  'chemberta', 'morfeus_mlp', 'only_morfeus', 'mlp2048', 'robert768', 'chemgpt', 'acsf', 'maccs']
         self.architecture = architecture
-        if architecture == 'mlp':
-            self.model = MLP(n_layers = n_layers, function = function, epochs = epochs, **kwargs)
-        elif architecture == 'gcn':
-            self.model = GCN( **kwargs)
-        elif architecture == 'gin':
-            self.model = GIN(**kwargs)
-        elif architecture == 'newmlp':
-            self.model = NewMLP(**kwargs)
-        elif architecture == 'chembert':
-            self.model =Chemberta(**kwargs)
-        else:
-            self.model = GAT(**kwargs)
 
-        #only for chemberta
-        self.training_args = TrainingArguments(
-        output_dir="./chemberta-finetuned",
-        eval_strategy="epoch",
-        save_strategy="epoch",
-        logging_strategy="epoch",
-        learning_rate=2e-5,
-        per_device_train_batch_size=16,
-        per_device_eval_batch_size=16,
-        num_train_epochs=epochs,
-        weight_decay=self.model.weight_decay,
-        load_best_model_at_end = True,
-        #compute_metrics=compute_metrics,
-        metric_for_best_model="accuracy",
-        report_to="none",
+# Default kwargs
+        common_kwargs = dict(
+        n_layers=n_layers,
+        function=function,
+        epochs=epochs,
+        n_hidden = n_hidden,
+        lr = lr,
         )
 
+        ARCH_PARAMS = {
+            "mlp":       (MLP, common_kwargs),
+            "gcn":       (GCN, {}),
+            "gin":       (GIN, {}),
+            
+            "chembert":  (Chemberta, {}),  # see if statement below
+            "morfeus_mlp": (MLP, {**common_kwargs, "in_feats": 2850}),
+            "only_morfeus": (MLP, {**common_kwargs, "in_feats": 1826}),
+            "mlp2048":   (MLP, {**common_kwargs, "n_hidden": 2048, "in_feats": 2048}),
+            "robert768": (MLP, {**common_kwargs, "in_feats": 768}),
+            "chemgpt":   (MLP, {**common_kwargs, "n_hidden": 2048, "in_feats": 2048}),
+            "maccs":     (MLP, {**common_kwargs, "n_layers": 2, "in_feats": 167}),
+            "acsf":      (MLP, {**common_kwargs, "n_hidden": n_hidden, "in_feats": 1200}),
+            "mm":        (AttMLP, {**common_kwargs, "n_hidden": n_hidden, "in_feats": 1200}),
+            "mmnoatt":   (MLP, {**common_kwargs, "n_hidden": n_hidden, "in_feats": 1200}),
+            "amlp":      (AttMLP, common_kwargs),
+            "x_512":     (MLP, {**common_kwargs, "n_hidden": n_hidden, "in_feats": 512}),
+            "x_256":     (MLP, {**common_kwargs, "n_hidden": n_hidden, "in_feats": 256}),
+            "x_128":     (MLP, {**common_kwargs, "n_hidden": n_hidden, "in_feats": 128}),
+            "mm_768":    (MLP, {**common_kwargs, "n_hidden": n_hidden, "in_feats": 768}),
+            "mm_512":    (MLP, {**common_kwargs, "n_hidden": n_hidden, "in_feats": 512}),
+            "mm_256":    (MLP, {**common_kwargs, "n_hidden": n_hidden, "in_feats": 256}),
+            "x4":        (MLP, {**common_kwargs, "n_hidden": n_hidden, "in_feats": 2048}),
+            "x4_1024":   (MLP, {**common_kwargs, "n_hidden": n_hidden, "in_feats": 1024}),
+            "x4_768":    (MLP, {**common_kwargs, "n_hidden": n_hidden, "in_feats": 768}),
+
+}
+
+        if architecture == "chemberta":
+                self.model = Chemberta(**kwargs)
+                self.training_args = TrainingArguments(
+                    output_dir="./chemberta-finetuned",
+                    eval_strategy="epoch",
+                    save_strategy="epoch",
+                    logging_strategy="epoch",
+                    learning_rate=2e-5,
+                    per_device_train_batch_size=16,
+                    per_device_eval_batch_size=16,
+                    num_train_epochs=epochs,
+                    weight_decay=self.model.weight_decay,
+                    load_best_model_at_end=True,
+                    metric_for_best_model="accuracy",
+                    report_to="none",
+                    )
+        elif architecture in ARCH_PARAMS:
+                model_class, params = ARCH_PARAMS[architecture]
+                self.model = model_class(**params, **kwargs)
+        else:
+    # Default fallback
+             self.model = GAT(**kwargs)
+
+        
         self.device_type = "cuda" if torch.cuda.is_available() else "cpu"
         self.device = torch.device(self.device_type)
         self.loss_fn = torch.nn.NLLLoss()
-        if self.architecture != 'chembert':
+        if self.architecture != 'chemberta':
         # Move the whole model to the gpu
             self.model = self.model.to(self.device)
             self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.model.lr,
@@ -399,12 +435,12 @@ class Model(torch.nn.Module):
         self.epochs, self.epoch = self.model.epochs, 0
 
     def train(self, dataloader: DataLoader, epochs: int = None, verbose: bool = True) -> None:
-      if self.architecture != 'chembert':
+      if self.architecture != 'chemberta':
         bar = trange(self.epochs if epochs is None else epochs, disable=not verbose)
         scaler = torch.cuda.amp.GradScaler()
         print()
         from torch.optim.lr_scheduler import ReduceLROnPlateau
-        #scheduler = ReduceLROnPlateau(self.optimizer, mode='min', patience=3, factor=0.5)
+        scheduler = ReduceLROnPlateau(self.optimizer, mode='min', patience=3, factor=0.5)
         early_stopping = EarlyStopping(patience=6, min_delta=0)
         for i in bar:#epoch loop 
             running_loss = 0
@@ -440,12 +476,12 @@ class Model(torch.nn.Module):
                         # Add anchored loss to regular loss according to Pearce et al. (2018)
                         loss = loss + l2_loss
 
-                    #scaler.scale(loss).backward()
+                    scaler.scale(loss).backward()
                     # loss.backward()
-                    #scaler.step(self.optimizer)
+                    scaler.step(self.optimizer)
                     # self.optimizer.step()
-                    #scaler.update()
-                    #scheduler.step(loss)
+                    scaler.update()
+                    scheduler.step(loss)
                     running_loss += loss.item()
                     items += len(y)
 
@@ -455,8 +491,9 @@ class Model(torch.nn.Module):
             self.epoch += 1
             early_stopping(epoch_loss)
             if early_stopping.early_stop:
-               print("Early stopping triggered")
-               break
+               #print("Early stopping triggered")
+               #break
+               pass
         
       else:
             
@@ -478,7 +515,7 @@ class Model(torch.nn.Module):
         :param dataloader: Torch geometric data loader with data
         :return: A 1D-tensors
         """
-      if architecture != 'chembert':
+      if architecture != 'chemberta':
         y_hats = torch.tensor([]).to(self.device)
         with torch.no_grad():
             with torch.autocast(device_type=self.device_type, dtype=torch.bfloat16):
@@ -512,17 +549,17 @@ class Model(torch.nn.Module):
            
 class Ensemble(torch.nn.Module):
     """ Ensemble of GCNs"""
-    def __init__(self, ensemble_size: int = 10, seed: int = 0,n_layers =3, function = 'relu',epochs = 50, architecture: str = 'mlp', **kwargs) -> None:
+    def __init__(self, ensemble_size: int = 10, seed: int = 0,n_layers =3, n_hidden = 1024, function = 'relu',epochs = 50, architecture: str = 'mlp', lr =3e-4, **kwargs) -> None:
         self.ensemble_size = ensemble_size
-        if architecture == 'chembert':
+        if architecture == 'chemberta':
             self.ensemble_size = 1
         self.architecture = architecture
         self.seed = seed
         self.epochs = epochs
         self.n_layers = n_layers
         rng = np.random.default_rng(seed=seed)
-        self.seeds = rng.integers(0, 1000, ensemble_size)
-        self.models = {i: Model(seed=s, architecture=architecture, n_layers =n_layers, epochs = epochs, function = function, **kwargs) for i, s in enumerate(self.seeds)}
+        self.seeds = rng.integers(0, 1000, self.ensemble_size)
+        self.models = {i: Model(seed=s, architecture=architecture, n_layers =n_layers, n_hidden = n_hidden, epochs = epochs,lr = lr, function = function, **kwargs) for i, s in enumerate(self.seeds)}
 
     def optimize_hyperparameters(self, x, y: DataLoader, **kwargs):
         # raise NotImplementedError
@@ -536,17 +573,18 @@ class Ensemble(torch.nn.Module):
 
     def predict(self, dataloader, architecture, **kwargs) -> Tensor:
        # """ logits_N_K_C = [N, num_inference_samples, num_classes] """
-       # if architecture != 'chembert':
+       # if architecture != 'chemberta':
             raw_logits_N_K_C = [m.predict(dataloader, architecture) for m in self.models.values()]
-            if architecture != 'chembert':
+            if architecture != 'chemberta':
                 logits_N_K_C = torch.stack(raw_logits_N_K_C, 1)  # [N, num_inference_samples, num_classes]
-                return logits_N_K_C
+                return logits_N_K_C#64, 10, 2
             else:
                 arrays = []
                 for el in raw_logits_N_K_C:
                     arrays.append( el.predictions)
                     #print(prediction.shape)
                 result = np.stack(arrays)
+                result = np.transpose(result, (1, 0, 2))
                 #all_preds = all_preds[np.newaxis, ...]
                 return torch.tensor(result, dtype=torch.float32)
        # else:

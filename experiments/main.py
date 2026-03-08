@@ -26,8 +26,8 @@ if __name__ == '__main__':
     parser.add_argument('-acq', help="Acquisition function ('random', 'exploration', 'exploitation', 'dynamic', "
                                      "'similarity', 'bald', 'dynamicbald')", default='exploitation')
     parser.add_argument('-bias', help='The level of bias ("random", "small", "large")', default='random')
-    parser.add_argument('-arch', help='The neural network architecture ("gcn", "mlp", "chembert")', default='chembert')
-    parser.add_argument('-dataset', help='The dataset ("ALDH1", "PKM2", "VDR")', default='PKM2')
+    parser.add_argument('-arch', help='The neural network architecture ("gcn", "mlp", "chembert")', default='mlp')
+    parser.add_argument('-dataset', help='The dataset ("ALDH1", "PKM2", "VDR")', default='ALDH1')
     parser.add_argument('-retrain', help='Retrain the model every cycle', default='True')
     parser.add_argument('-batch_size', help='How many molecules we select each cycle', default=64)
     parser.add_argument('-n_start', help='How many molecules we have in our starting set (min=2)', default=64)
@@ -37,6 +37,7 @@ if __name__ == '__main__':
     parser.add_argument('-function', default='relu')
     parser.add_argument('-epochs', default = 20)
     parser.add_argument('-n_layers', default = 3)
+    parser.add_argument('-corrupt', help='% of mislabeled (1% is 1, not 0.01)', default = 5)
     args = parser.parse_args()
 
     PARAMETERS['acquisition'] = [args.acq]
@@ -53,6 +54,7 @@ if __name__ == '__main__':
     PARAMETERS['function'] = [args.function]
     PARAMETERS['epochs'] = [int(args.epochs)]
     PARAMETERS['n_layers'] = [int(args.n_layers)]
+    PARAMETERS['corrupt'] = [int(args.corrupt)]
     # LOG_FILE = f'{args.o}/{args.arch}_{args.acq}_{args.bias}_{args.batch_size}_simulation_results.csv'
     LOG_FILE = args.o
 
@@ -81,7 +83,10 @@ if __name__ == '__main__':
                                   dataset=experiment['dataset'],
                                   scrambledx=experiment['scrambledx'],
                                   scrambledx_seed=experiment['scrambledx_seed'],
-                                  optimize_hyperparameters=False)
+                                  ensemble_size = 1,
+                                  corrupt = experiment['corrupt']*0.01,
+                                  optimize_hyperparameters=False
+                                  )
         
         # Add the experimental settings to the outfile
         results['acquisition_method'] = experiment['acquisition']

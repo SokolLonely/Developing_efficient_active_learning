@@ -16,7 +16,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 if __name__ == '__main__':
 
     # Process the data
-    for dataset in ['ALDH1', 'PKM2', 'VDR']:
+    for dataset in ['ALDH1']:
 
         df = get_data(dataset=dataset)
         df_screen, df_test = split_data(df, screen_size=100000, test_size=20000, dataset=dataset)
@@ -29,7 +29,7 @@ if __name__ == '__main__':
 
         similarity_vectors(df_screen, df_test, dataset=dataset)
 
-    # Perform clustering for each dataset
+    '''# Perform clustering for each dataset
     for dataset, tani_cutoffs in zip(['ALDH1'], [[0.80, 0.61], [0.80, 0.70], [0.80, 0.60]]): #'PKM2', 'VDR', 
         ds_screen = MasterDataset('screen', representation='ecfp', dataset=dataset)
         x_screen, y_screen, smiles_screen = ds_screen.all()
@@ -110,4 +110,4 @@ if __name__ == '__main__':
         MasterDataset(name='test', df=df_test, overwrite=True, dataset=dataset)
 
         df_screen = pd.read_csv(os.path.join(ROOT_DIR, f'data/{dataset}/original/screen.csv'))
-        df_test = pd.read_csv(os.path.join(ROOT_DIR, f'data/{dataset}/original/test.csv'))
+        df_test = pd.read_csv(os.path.join(ROOT_DIR, f'data/{dataset}/original/test.csv'))'''

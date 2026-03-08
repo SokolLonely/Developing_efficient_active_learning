@@ -1,4 +1,4 @@
-
+#Author: Simon Ryabinkin, University of Calgary, 2025-2026, modified from Derek van Tilborg, Eindhoven University of Technology, May 2023
 from typing import Any
 import sys
 import os
@@ -12,9 +12,9 @@ import torch
 import h5py
 import transformers
 from config import ROOT_DIR
-
-from active_learning.utils import molecular_graph_featurizer as smiles_to_graph, scramble_features, smiles_to_ecfp, \
-    get_tanimoto_matrix, check_featurizability, scramble_graphs, smiles_to_rdkit_mol, rdkit_mol_to_ase, smiles_to_acsf, smiles_to_soap
+from sklearn.decomposition import PCA
+from active_learning.utils import molecular_graph_featurizer as smiles_to_graph, scramble_features, smiles_to_ecfp, smiles_to_maccs, \
+    get_tanimoto_matrix, check_featurizability, scramble_graphs, smiles_to_rdkit_mol, rdkit_mol_to_ase, smiles_to_acsf, smiles_to_soap, smiles_to_morfeus, smiles_to_chemberta_embeddings, smiles_to_chemgpt_embeddings
 
 
 def canonicalize(smiles: str, sanitize: bool = True):
@@ -30,9 +30,9 @@ def get_data(random_state: int = 42, dataset: str = 'ALDH1'):
         actives = [canonicalize(smi.strip().split()[0]) for smi in f.readlines()]
 
     # remove duplicates:
-    inactives = list(set(inactives))
-    actives = list(set(actives))
-
+    inactives = list(dict.fromkeys(inactives))
+    actives = list(dict.fromkeys(actives))
+    
     # remove intersecting molecules:
     intersecting_mols = np.intersect1d(inactives, actives)
     inactives = [smi for smi in inactives if smi not in intersecting_mols]
@@ -84,7 +84,7 @@ class MasterDataset:
     def __init__(self, name: str, df: pd.DataFrame = None, dataset: str = 'ALDH1', representation: str = 'ecfp', root: str = 'data',
                  overwrite: bool = False, scramble_x: bool = False, scramble_x_seed: int = 1) -> None:
 
-        assert representation in ['ecfp', 'graph', 'smiles'], f"'representation' must be 'ecfp' or 'graph', not {representation}"
+        #assert representation in ['ecfp', 'graph', 'smiles', 'morfeus', 'only_morfeus', 'robert768', 'chemgpt', 'maccs', 'acsf'], f"'representation' must be 'ecfp' or 'graph', not {representation}"
         self.representation = representation
         self.pth = os.path.join(ROOT_DIR, root, dataset, name)
         print(self.pth)
@@ -112,37 +112,129 @@ class MasterDataset:
         index_smiles = OrderedDict({i: smi for i, smi in enumerate(df.smiles)})
         smiles_index = OrderedDict({smi: i for i, smi in enumerate(df.smiles)})
         smiles = np.array(df.smiles.tolist())
-        x = smiles_to_ecfp(smiles, silent=False)
-        y = torch.tensor(df.y.tolist())
-        print('new part started') 
-        x_soap = smiles_to_soap(smiles)
-        print('soaps done')
-        x_acsf = smiles_to_acsf(smiles)
-        print('new part finished')
-        graphs = [smiles_to_graph(smi, y=y.type(torch.LongTensor)) for smi, y in tqdm(zip(smiles, y))]
+        # x = smiles_to_ecfp(smiles, silent=False)
+        # y = torch.tensor(df.y.tolist())
+        # x_roberta_embedding = smiles_to_chemberta_embeddings(smiles, silent=False)        
+        # x_llm_embedding = smiles_to_chemgpt_embeddings(smiles, silent=False)        
+        # x_maccs = smiles_to_maccs(smiles, silent=False)
+        # x_morfeus = smiles_to_morfeus(smiles, silent=False, path = self.pth) #it is mordred not morfeus
+        # graphs = [smiles_to_graph(smi, y=y.type(torch.LongTensor)) for smi, y in tqdm(zip(smiles, y))]
+        # x_acsf = smiles_to_acsf(smiles, silent=False)
+        # pca = PCA(n_components=512, svd_solver="randomized", random_state=42)
+        # if len(x) < 512: #only for preprocess demo
+        #      pca = PCA(n_components=len(x),  random_state=42)
+        # x_512 = pca.fit_transform(x)
+        # x_256 = x_512[:, :256]
+        # x_128 = x_512[:, :128]
 
-        torch.save(index_smiles, os.path.join(self.pth, 'index_smiles'))
-        torch.save(smiles_index, os.path.join(self.pth, 'smiles_index'))
-        torch.save(smiles, os.path.join(self.pth, 'smiles'))
-        torch.save(x, os.path.join(self.pth, 'x'))
-        torch.save(y, os.path.join(self.pth, 'y'))
-        torch.save(graphs, os.path.join(self.pth, 'graphs'))
+        # torch.save(index_smiles, os.path.join(self.pth, 'index_smiles'))
+        # torch.save(smiles_index, os.path.join(self.pth, 'smiles_index'))
+        # torch.save(smiles, os.path.join(self.pth, 'smiles'))
+        # torch.save(x, os.path.join(self.pth, 'x'))
+        # torch.save(x_512, os.path.join(self.pth, 'x_512'))
+        # torch.save(x_256, os.path.join(self.pth, 'x_256'))
+        # torch.save(x_128, os.path.join(self.pth, 'x_128'))
+        # torch.save(y, os.path.join(self.pth, 'y'))
+        # torch.save(x_llm_embedding, os.path.join(self.pth, 'x_llm_embedding'))
+        # torch.save(x_roberta_embedding, os.path.join(self.pth, 'x_roberta_embedding'))
+        # torch.save(x_morfeus, os.path.join(self.pth, 'x_morfeus'))
+        # torch.save(x_maccs, os.path.join(self.pth, 'x_maccs'))
+        # torch.save(x_acsf, os.path.join(self.pth, 'x_acsf'))
+        # torch.save(graphs, os.path.join(self.pth, 'graphs'))
+        #creating pca on all
+        x_ecfp = torch.load(os.path.join(self.pth, 'x'), weights_only=False)
+        x_maccs = torch.load(os.path.join(self.pth, 'x_maccs'), weights_only=False)
+        x_roberta_embedding = torch.load(os.path.join(self.pth, 'x_roberta_embedding'), weights_only=False)
+        x_mordred = torch.load(os.path.join(self.pth, 'x_morfeus'), weights_only=False).squeeze(1)
+        x4 = np.concatenate((x_ecfp, x_maccs, x_roberta_embedding, x_mordred), axis=1)
+        pca = PCA(n_components=2048, svd_solver="randomized", random_state=42)
+        x4_2048 = pca.fit_transform(x4)
+        torch.save(x4_2048, os.path.join(self.pth, 'x4_2048')) #2048 dim
+        # x = np.concatenate((x_ecfp,  x_maccs, ), axis=1)
+        # x = np.pad(x, ((0, 0), (0, 9)), mode='constant')#pad to 1200 len on axis 1 for self-attention
+        # pca768 = PCA(n_components=768, svd_solver="randomized", random_state=42)
+        # if len(x) < 768: #for demo preprocessing
+        #     pca768 = PCA(n_components=len(x), svd_solver="randomized", random_state=42)
+        # mm_768 = pca768.fit_transform(x)
+        # mm_512 = mm_768[:, :512]
+        # mm_256 = mm_768[:, :256]
+        # torch.save(mm_768, os.path.join(self.pth, 'mm_768'))
+        # torch.save(mm_512, os.path.join(self.pth, 'mm_512'))
+        # torch.save(mm_256, os.path.join(self.pth, 'mm_256'))
+
+
+        #creating pca on all
+
         print('processing done')
     def load(self) -> (dict, dict, np.ndarray, np.ndarray, np.ndarray, list):
-
+        from collections import OrderedDict
         print('Loading data ... ', flush=True, file=sys.stderr)
-
         index_smiles = torch.load(os.path.join(self.pth, 'index_smiles'), weights_only=False)
-        smiles_index = torch.load(os.path.join(self.pth, 'smiles_index'), weights_only=False)
-        smiles = torch.load(os.path.join(self.pth, 'smiles',), weights_only=False)
-        x = torch.load(os.path.join(self.pth, 'x'), weights_only=False)
-        y = torch.load(os.path.join(self.pth, 'y'), weights_only=False)
-        graphs = torch.load(os.path.join(self.pth, 'graphs'), weights_only=False)
+        var_len = len(index_smiles) #by default, cuts arrays to length of index_smiles. Usually useless, but can be changed (len(index_smiles)/2 for example ) to test smaller screening space
+        index_smiles = torch.load(os.path.join(self.pth, 'index_smiles'), weights_only=False)#[:var_len]
+        index_smiles = OrderedDict(list(index_smiles.items())[:var_len])
+        smiles_index = torch.load(os.path.join(self.pth, 'smiles_index'), weights_only=False)#[:var_len]
+        smiles_index = OrderedDict(list(smiles_index.items())[:var_len])
+        smiles = torch.load(os.path.join(self.pth, 'smiles',), weights_only=False)[:var_len]
+        smiles = np.array(smiles.tolist())[:var_len]
+        y = torch.load(os.path.join(self.pth, 'y'), weights_only=False)[:var_len]
+        if self.representation == 'morfeus':
+            x_ecfp = torch.load(os.path.join(self.pth, 'x'), weights_only=False)[:var_len]
+            print(f"ecfp len = {len(x_ecfp)}")
+            x_m = torch.load(os.path.join(self.pth, 'x_morfeus'), weights_only=False)#[:var_len]#.squeeze(-1)
+            print(f"morfeus len = {len(x_m)}")
+            x_m = x_m.squeeze(1)[:var_len]
+            print(f"squeezed morfeus len = {len(x_m)}")
+            x = np.concatenate((x_ecfp, x_m), axis = 1)[:var_len]
+            print(f"Y LEN = {len(y)}")
+        elif self.representation == 'only_morfeus':
+            x = torch.load(os.path.join(self.pth, 'x_morfeus'), weights_only=False)
+            x = x.squeeze(1)[:var_len]
+            print(f"only morfeus len = {len(x)}")
+        elif self.representation == 'robert768':
+            x = torch.load(os.path.join(self.pth, 'x_roberta_embedding'), weights_only=False)[:var_len]
+            #print(f"roberta len = {len(x)}")
+        elif self.representation == 'chemgpt':
+                x = torch.load(os.path.join(self.pth, 'x_llm_embedding'), weights_only=False)[:var_len]# 2048
+        elif self.representation == 'maccs':
+             x = torch.load(os.path.join(self.pth, 'x_maccs'), weights_only=False)[:var_len]
+        elif self.representation == 'acsf':
+            x = torch.load(os.path.join(self.pth, 'x_acsf'), weights_only=False)[:var_len]
+        elif self.representation == 'mm':
+            x_ecfp = torch.load(os.path.join(self.pth, 'x'), weights_only=False)[:var_len]
+            x_maccs = torch.load(os.path.join(self.pth, 'x_maccs'), weights_only=False)[:var_len]
+            x = np.concatenate((x_ecfp,  x_maccs, ), axis=1)
+            x = np.pad(x, ((0, 0), (0, 9)), mode='constant')#pad to 1200 len on axis 1 for self-attention 
+        elif self.representation == 'x_512':
+             x = torch.load(os.path.join(self.pth, 'x_512'), weights_only=False)[:var_len]
+        elif self.representation == 'x_256':
+             x = torch.load(os.path.join(self.pth, 'x_256'), weights_only=False)[:var_len]
+        elif self.representation == 'x_128':
+             x = torch.load(os.path.join(self.pth, 'x_128'), weights_only=False)[:var_len]
+        elif self.representation == 'mm_768':
+            x =  torch.load(os.path.join(self.pth, 'mm_768'), weights_only=False)
+        elif self.representation == 'mm_512':
+            x =  torch.load(os.path.join(self.pth, 'mm_512'), weights_only=False)
+        elif self.representation == 'mm_256':
+            x =  torch.load(os.path.join(self.pth, 'mm_256'), weights_only=False)
+        elif self.representation == 'x4':
+            x =  torch.load(os.path.join(self.pth, 'x4_2048'), weights_only=False)[:var_len]
+        elif self.representation == 'x4_1024':
+            x =  torch.load(os.path.join(self.pth, 'x4_2048'), weights_only=False)[:var_len]
+            x = x[:, :1024]
+        elif self.representation == 'x4_768':
+            x =  torch.load(os.path.join(self.pth, 'x4_2048'), weights_only=False)[:var_len]
+            x = x[:, :768]
+        else:
+            x = torch.load(os.path.join(self.pth, 'x'), weights_only=False)[:var_len]
+
+        graphs  = torch.load(os.path.join(self.pth, 'graphs'), weights_only=False)
         print('loading done')
+        #return OrderedDict(list(smiles_index.items())[:20]), OrderedDict(list(index_smiles.items())[:20]), smiles[:20], x[:20], y[:20], graphs[:20]
         return smiles_index, index_smiles, smiles, x, y, graphs
 
     def __len__(self) -> int:
-        return len(self.smiles)
+        return len(self.x)
 
     def all(self):
         return self[range(len(self.smiles))]
@@ -161,13 +253,16 @@ class MasterDataset:
             idx = [idx]
         #print(f"idx: {idx}, dtype = {type(idx)}")
         #print(f"smiles: {self.smiles[idx]}")
-        if self.representation == 'ecfp':
-            return self.x[idx], self.y[idx], self.smiles[idx]
+        #if self.representation == 'ecfp' or self.representation == 'morfeus' or self.representation == 'only_morfeus' or self.representation == 'robert768' or self.representation == 'chemgpt' or self.representation == 'maccs':
+            
         if self.representation == 'graph':
             return [self.graphs[i] for i in idx], self.y[idx], self.smiles[idx]
-        if self.representation == 'smiles':
+        elif self.representation == 'smiles':
             return self.tokenize(self.smiles[idx]), self.y[idx], self.smiles[idx]
-
+        else:
+            print(len(self.x), len(self.y), len(self.smiles)) # len(self.x_acsf))
+            return self.x[idx], self.y[idx], self.smiles[idx]
+       
 
 def smi_to_scaff(smiles: str, includeChirality: bool = False):
     return MurckoScaffold.MurckoScaffoldSmiles(mol=Chem.MolFromSmiles(smiles), includeChirality=includeChirality)

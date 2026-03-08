@@ -4,7 +4,7 @@ This script contains the class that manages the data over cycles
 
     - Handler: class that manages getting the start data and adding new samples to it every active learning cycle.
 
-    Author: Derek van Tilborg, Eindhoven University of Technology, May 2023
+    Author: Simon Ryabinkin, University of Calgary, 2025, modified from Derek van Tilborg, Eindhoven University of Technology, May 2023
 
 """
 
@@ -16,19 +16,27 @@ from config import ROOT_DIR
 
 
 class Handler:
-    def __init__(self, n_start: int = 64, bias: str = 'random', seed: int = 42, dataset: str = 'ALDH1') -> None:
-
+    def __init__(self, n_start: int = 64, bias: str = 'random', seed: int = 42, dataset: str = 'ALDH1', corrupt = 0) -> None:
+        from collections import OrderedDict
         assert bias in ['random', 'small', 'large'], "'bias' has to be either 'random', 'small', or 'large'"
         assert n_start <= 64 or bias == 'random', 'Number of starting molecules has to be <= 64'
 
         self.index_smiles = torch.load(os.path.join(ROOT_DIR, 'data', dataset, 'screen', 'index_smiles'), weights_only=False)
+        
+        index_smiles = OrderedDict(list(self.index_smiles.items()))
         self.smiles_index = torch.load(os.path.join(ROOT_DIR, 'data', dataset, 'screen', 'smiles_index'), weights_only=False)
+        self.smiles_index = OrderedDict(list(self.smiles_index.items()))
         self.all_y = torch.load(os.path.join(ROOT_DIR, 'data', dataset, 'screen', 'y'), weights_only=False)
-
+        #self.n_false_labels = 0
+        # if corrupt > 0:
+        #     self.all_y, self.n_false_labels = flip_zeros(self.all_y, fraction= corrupt*0.01, seed=seed)
+        #self.all_y = OrderedDict(list(self.all_y.items())
         self.dataset = dataset
         self.selected_start_cluster = None
-        self.train_idx, self.screen_idx = self.get_start_data(n_start=n_start, bias=bias, seed=seed)
+        self.corrupt = corrupt
+        self.train_idx, self.screen_idx,self.f_p, self.n_false_labels = self.get_start_data(n_start=n_start, bias=bias, seed=seed)
         self.picks = [self.train_idx]
+        self.corrupt = corrupt
 
     def get_start_data(self, n_start: int = 64, bias: str = 'random', seed: int = 0) -> (np.ndarray, np.ndarray):
 
@@ -64,11 +72,16 @@ class Handler:
 
         train_idx = np.concatenate((selected_hit_idx, selected_others_idx))
         rng.shuffle(train_idx)
-
+        a = sum(self.all_y[train_idx]).item()
+        f_p = 0
+        n = 0
+        if self.corrupt > 0:
+            self.all_y[train_idx],f_p,  n = flip_zeros(self.all_y[train_idx], fraction = self.corrupt)
+        a = sum(self.all_y[train_idx]).item()
         screen_idx = np.array([i for i in range(len(self.all_y)) if i not in train_idx])
         assert len(np.intersect1d(screen_idx, train_idx)) == 0, "Something went wrong selecting train/screen samples"
 
-        return train_idx, screen_idx
+        return train_idx, screen_idx, f_p, n
 
     def add(self, picks: Union[list, np.ndarray]):
         # Get the corresponding indices of the master dataset, and save it in self.acquired
@@ -83,3 +96,16 @@ class Handler:
 
     def __call__(self, *args, **kwargs):
         return self.get_idx()
+def flip_zeros(tensor, fraction=0.01, seed=42):
+
+        if seed is not None:
+           torch.manual_seed(seed)
+        zeros_mask = (tensor == 0)
+        num_zeros = zeros_mask.sum().item()
+        n = max(1, int(fraction * num_zeros))
+        zero_indices = zeros_mask.nonzero(as_tuple=False)
+        perm = torch.randperm(num_zeros)[:n]
+        flip_indices = zero_indices[perm]
+        tensor[flip_indices] = 1
+    
+        return tensor, perm, n

@@ -1,4 +1,7 @@
-
+# import morfeus
+# print(dir(morfeus))
+# from morfeus import *
+#from morfeus import read_xyz, SASA, BuriedVolume, Sterimol, Dispersion
 from typing import Union, Optional
 import pandas as pd
 import numpy as np
@@ -6,6 +9,7 @@ from tqdm import tqdm
 from rdkit import Chem
 from rdkit.Chem import AllChem, DataStructs
 import torch
+import os
 from torch import Tensor
 from torch.utils.data import IterableDataset, TensorDataset, DataLoader, Dataset
 from torch_geometric.data import Data
@@ -13,6 +17,8 @@ from torch_geometric.loader import DataLoader as pyg_DataLoader
 from sklearn.metrics import balanced_accuracy_score, roc_auc_score, precision_score, recall_score, confusion_matrix
 from transformers import AutoTokenizer
 from datasets import Dataset
+from molfeat.trans.fp import FPVecTransformer #commented out because of import error on compute canada, used only for preprocessing
+from transformers import AutoModelForCausalLM
 
 structural_smarts = {
     # chirality
@@ -403,33 +409,82 @@ def smiles_to_soap(smiles: list[str], rCut=6.0, species=["H", "O","C", "N", "S",
         output.append(f)
 
     return output
-def smiles_to_acsf(smiles: list[str],species=["H", "O","C", "N", "S", "Cl", "Br", 'F', "I", "P"], rCut=6.0,pad_size = 62, silent: bool = True, to_array: bool = True):
-    """ Get a Numpy array of SOAPs from a list of SMILES strings """
-    from dscribe.descriptors import ACSF
-    from ase.io import read
+from typing import List, Optional
+import numpy as np
+from tqdm import tqdm
+from dscribe.descriptors import ACSF
+from ase import Atoms
+def _smiles_to_acsf_one(smiles: str, acsf: ACSF) -> Optional[np.ndarray]:
+    """
+    Convert a single SMILES string to an ACSF array (shape: n_atoms x n_features).
+    Returns None if conversion or descriptor calculation fails."""
+    
+    try:
+        mols = smiles_to_rdkit_mol([smiles])        # list of RDKit Mols
+        if not mols or mols[0] is None:
+            return None
+        atoms_list = rdkit_mol_to_ase(mols)         # list of ASE Atoms
+        if not atoms_list or atoms_list[0] is None:
+            return None
+        atoms = atoms_list[0]
+        desc = acsf.create(atoms) 
+        return np.asarray(desc)
+    except Exception:
+        # Any failure -> return None
+        return None
 
-    if type(smiles) is str:
+def smiles_to_acsf(
+    smiles: List[str] | str,
+    species: List[str] = ["H", "O", "C", "N", "S", "Cl", "Br", "F", "I", "P"],
+    rCut: float = 6.0,
+    pad_size: int = 120,
+    silent: bool = True,
+    to_array: bool = True
+) -> np.ndarray:
+    
+    """Convert a list (or single) SMILES to an array of ACSF descriptors.
+    - Failed molecules: become rows of all zeros.
+    Returns: np.ndarray shape (n_smiles, pad_size * n_features)"""
+    
+    if isinstance(smiles, str):
         smiles = [smiles]
-    #convert smiles to rdkit atoms
-    mols = smiles_to_rdkit_mol(smiles)
-    atoms = rdkit_mol_to_ase(mols)
-    # Set up the SOAP descriptor with parameters:
-    # species, rcut, nmax, and lmax
-    acsf = ACSF(species=species,r_cut=rCut)
-    ac = [acsf.create(s) for s in tqdm(atoms, disable=silent)]
-    if not to_array:
-        return ac
+    acsf = ACSF(species=species, r_cut=rCut)
+
+    results = []
+    for s in tqdm(smiles, disable=silent):
+        res = _smiles_to_acsf_one(s, acsf)
+        results.append(res)
+
+    # Determine n_features:
+    n_features = None
+    for r in results:
+        if r is not None:
+            n_features = r.shape[1]
+            break
 
     output = []
-    for f in ac:
-        #arr = np.zeros((1,))
-        #ConvertToNumpyArray(f, arr)
-        f = np.pad(f, ((0, pad_size - f.shape[0]), (0, 0), ), constant_values=-1)
-        output.append(f)
+    for r in results:
+        if r is None:        
+            padded = np.zeros((pad_size, n_features), dtype=float)
+        else:
+            if r.shape[0] > pad_size:
+                r_used = r[:pad_size, :]
+            else:
+                r_used = r
+            pad_rows = pad_size - r_used.shape[0]
+            if pad_rows > 0:
+                padded = np.pad(r_used, ((0, pad_rows), (0, 0)), constant_values=-1)
+            else:
+                padded = r_used  
+        output.append(padded.ravel())
 
-    return output
+    result_array = np.asarray(output)
+    if to_array:
+        return result_array
+    else:
+        return results
 
-def smiles_to_ecfp(smiles: list[str], radius: int = 2, nbits: int = 1024, silent: bool = True, to_array: bool = True) \
+def smiles_to_ecfp(smiles: list[str], radius: int = 3, nbits: int = 1024, silent: bool = True, to_array: bool = True) \
         -> np.ndarray:
     """ Get a Numpy array of ECFPs from a list of SMILES strings """
     from rdkit.Chem.AllChem import GetMorganFingerprintAsBitVect
@@ -451,8 +506,141 @@ def smiles_to_ecfp(smiles: list[str], radius: int = 2, nbits: int = 1024, silent
         output.append(arr)
 
     return np.asarray(output)
+def smiles_to_morfeus(smiles: list[str], silent: bool = True, to_array: bool = True, path = '') -> pd.DataFrame:
+    from rdkit import Chem
+    from rdkit.Chem import AllChem
+    if type(smiles) is str:
+        smiles = [smiles]
+    output = []
+    for string in tqdm(smiles, disable=silent):
+        #new_path = os.path.join( path, f"{string.replace("/", "").replace("\\", "")}.xyz")
+        #smiles_to_xyz(string, filename = new_path)
+        temp = compute_mordred_descriptors(string)
+        output.append(temp)
+    
+    if not to_array:
+        return output
+    else:
+        output = np.array(output)
+        return output
+def smiles_to_xyz(smiles, filename="output.xyz"):
+  if not os.path.exists(filename):
+    mol = Chem.MolFromSmiles(smiles)
+    mol = Chem.AddHs(mol)  # Add hydrogens
+    AllChem.EmbedMolecule(mol)  # Generate 3D coordinates
+    try:
+        AllChem.UFFOptimizeMolecule(mol)  
+        conf = mol.GetConformer()
+    except:
+       try:
+            Chem.SanitizeMol(mol, catchErrors=True)
+            AllChem.UFFOptimizeMolecule(mol)
+            conf = mol.GetConformer()
+       except:
+           pass
+    
+    num_atoms = mol.GetNumAtoms()
 
+    with open(filename, "w") as f:
+        f.write(f"{num_atoms}\n")
+        f.write(f"SMILES: {smiles}\n")
+        for atom in mol.GetAtoms():
+           try:
+            pos = conf.GetAtomPosition(atom.GetIdx())
+            symbol = atom.GetSymbol()
+            f.write(f"{symbol} {pos.x:.6f} {pos.y:.6f} {pos.z:.6f}\n")
+           except:
+               pass
 
+    #print(f"XYZ file written to {filename}")
+
+def compute_mordred_descriptors(smiles):
+    # try:
+    #  from morfeus import read_xyz, SASA, BuriedVolume, Sterimol, Dispersion
+    # except:
+    #      pass
+    try:
+        transform_mordred = FPVecTransformer(kind="mordred", ignore_3D=False, replace_nan=True, n_jobs=1) # don't ignore 3D descriptors
+        features_mordred, index_mordred = transform_mordred(smiles, ignore_errors=True)
+        return features_mordred
+    except Exception as e:
+        print(f"Morfeus descriptor calculation failed for {filename}: {str(e)}")
+        return np.zeros((1826, 1))
+
+def smiles_to_chemberta_embeddings(smiles: list[str], model_name="seyonec/ChemBERTa-zinc-base-v1",   silent: bool = True, to_array: bool = True) -> np.ndarray:
+    """ Get a Numpy array of ChemBERTa embeddings from a list of SMILES strings """
+    import torch
+    from tqdm import tqdm
+    from transformers import RobertaTokenizer, RobertaModel
+    model = RobertaModel.from_pretrained(model_name)
+    tokenizer = RobertaTokenizer.from_pretrained(model_name)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.to(device)
+    model.eval()
+    if type(smiles) is str:
+        smiles = [smiles]
+    embeddings = []
+    for s in tqdm(smiles, disable=silent):
+         inputs = tokenizer(s, return_tensors='pt').to(device)
+         with torch.no_grad():
+             outputs = model(**inputs)
+         embedding = outputs.last_hidden_state.mean(dim=1).cpu().numpy()
+         embeddings.append(embedding)
+    if not to_array:
+        return embeddings
+    return np.array(embeddings).squeeze()
+def smiles_to_chemgpt_embeddings(smiles: list[str], model_name="ncfrey/ChemGPT-1.2B", silent=True, to_array=True):
+    """Get embeddings from ChemGPT for a list of SMILES strings."""
+    import torch
+    import numpy as np
+    from tqdm import tqdm
+    from transformers import AutoTokenizer, GPT2Model
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model = AutoModelForCausalLM.from_pretrained(model_name, num_heads = 16).to(device)
+    model.eval()
+
+    if isinstance(smiles, str):
+        smiles = [smiles]
+
+    embeddings = []
+    for s in tqdm(smiles, disable=silent):
+        inputs = tokenizer(s, return_tensors='pt').to(device)
+        with torch.no_grad():
+            outputs = model(**inputs, output_hidden_states=True)
+        embedding = outputs.hidden_states[-1].mean(dim=1).cpu().numpy()
+        embeddings.append(embedding)
+
+    return np.array(embeddings).squeeze() if to_array else embeddings
+def smiles_to_maccs(smiles: list[str], silent: bool = True, to_array: bool = True) -> np.ndarray:
+    """Get a Numpy array of MACCS keys from a list of SMILES strings"""
+    from rdkit.Chem import MACCSkeys
+    from rdkit.Chem import MolFromSmiles
+    from rdkit.DataStructs import ConvertToNumpyArray
+    from tqdm import tqdm
+    import numpy as np
+
+    if isinstance(smiles, str):
+        smiles = [smiles]
+
+    fps = []
+    for s in tqdm(smiles, disable=silent):
+        mol = MolFromSmiles(s)
+        if mol is None:
+            raise ValueError(f"Invalid SMILES string: {s}")
+        fp = MACCSkeys.GenMACCSKeys(mol)
+        if to_array:
+            arr = np.zeros((1,), dtype=int)
+            ConvertToNumpyArray(fp, arr)
+            fps.append(arr)
+        else:
+            fps.append(fp)
+
+    if to_array:
+        return np.array(fps)
+    else:
+        return fps
 class Evaluate:
     def __init__(self):
         self.binary_accuracy = [0]
@@ -465,8 +653,8 @@ class Evaluate:
     def eval(self, logits_N_K_C: torch.Tensor, y: torch.Tensor, architecture):
         #size_y = logits_N_K_C
         #logits_N_K_C = logits_N_K_C.reshape(64, 10, 2)
-        if architecture == 'chembert':
-            logits_N_K_C = np.transpose(logits_N_K_C, (1, 0, 2))
+        # if architecture == 'chemberta':
+        #     logits_N_K_C = np.transpose(logits_N_K_C, (1, 0, 2))
         y = y.cpu() if type(y) is torch.Tensor else torch.tensor(y)
         y_hat = torch.mean(torch.exp(logits_N_K_C), dim=1)
         y_hat = y_hat.cpu() if type(y_hat) is torch.Tensor else torch.tensor(y_hat)
@@ -660,17 +848,10 @@ class TokenizedTextDataset(Dataset):
 
 def to_torch_dataloader(x: Union[list, np.ndarray], y: Optional[np.ndarray] = None, architecture = 'mlp', **kwargs) -> \
         Union[DataLoader, pyg_DataLoader]:
-     if architecture == 'mlp':
-        if type(x) is np.ndarray:
-            assert y is not None, 'No y values provided'
-            try:
-                return DataLoader(TensorDataset(Tensor(x), Tensor(y).unsqueeze(1).type(torch.LongTensor)), **kwargs)
-            except:
-                return DataLoader(TokenizedTextDataset(x, y), **kwargs)
-        else:
-            return pyg_DataLoader(x, **kwargs)
-     else:
-         print('New dataloader started')
+     #if architecture == 'mlp' or architecture == 'morfeus_mlp' or architecture == 'only_morfeus' or architecture == 'mlp2048' or architecture == 'robert768' or architecture == 'chemgpt' or architecture =='maccs':
+        
+     if architecture == 'chemberta':
+         print('Chembert dataloader started')
          from datasets import Dataset
          if not isinstance(x, list):
           x = x.tolist()
@@ -686,6 +867,15 @@ def to_torch_dataloader(x: Union[list, np.ndarray], y: Optional[np.ndarray] = No
          }
          hf_dataset = Dataset.from_dict(data)
          return hf_dataset
+     else:
+         if type(x) is np.ndarray:
+            assert y is not None, 'No y values provided'
+            try:
+                return DataLoader(TensorDataset(Tensor(x), Tensor(y).unsqueeze(1).type(torch.LongTensor)), **kwargs)
+            except:
+                return DataLoader(TokenizedTextDataset(x, y), **kwargs)
+         else:
+            return pyg_DataLoader(x, **kwargs)
 
 
 

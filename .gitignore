@@ -1,0 +1,41 @@
+.vs/
+__pycache__
+*.save
+*.pyc
+*.csv
+active_learning/__pycache__
+figures/
+active_learning/size_calculation.py
+experiments/main_rf.py
+        .gitignore
+        Dockerfile
+        active_learning_local/
+        data/.DS_Store
+        data/ALDH1/.DS_Store
+        data/ALDH1/screen/
+        data/ALDH1/test/
+        data/MAPK1/
+        data/PKM2/.DS_Store
+        data/PKM2/original/.DS_Store
+        data/VDR/.DS_Store
+        data/screen/
+        data/test/
+        experiments/main_hypers.py
+        experiments/size_calculation.py
+        job.sub
+        module1.py
+        project_librairies.txt
+        results
+        x_acsf
+        x_acsf_screen
+        x_ecfp4_2048
+        x_ecfp6_2048
+*.zip
+# Ignore everything in data
+data/*
+
+# But keep DEMO
+!data/DEMO/
+
+# And keep everything inside DEMO
+!data/DEMO/**

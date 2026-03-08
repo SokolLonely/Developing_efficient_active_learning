@@ -4,7 +4,7 @@ This script contains a selection of sample acquisition methods for active learni
 All functions here operate on model predictions in the form of logits_N_K_C = [N, num_inference_samples, num_classes].
 Here N is a molecule, K are the number of sampled predictions (i.e., 10 for a 10-model ensemble), and C = 2 ([0, 1]):
 
-    Author: Derek van Tilborg, Eindhoven University of Technology, May 2023
+    Author: Simon Ryabinkin, University of Calgary, 2025-2026, modified from Derek van Tilborg, Eindhoven University of Technology, May 2023
 
 """
 
@@ -27,8 +27,14 @@ class Acquisition:
                                    'dynamicbald': dynamic_exploration_bald,
                                    'bald': bald,
                                    'mc_bald': mc_bald,
+                                   'prod_1': high_confidence_consensus_prod_1,
+                                   'prod_0': high_confidence_consensus_prod_0,#bad
+                                   'sum_1': high_confidence_consensus_sum_1,
+                                   'sum_0': high_confidence_consensus_sum_0,#bad
                                    'dynamic_exploration_mc_bald': dynamic_exploration_mc_bald,
-                                   'similarity': similarity_search}
+                                    'bothv1': confidence_and_exploitation_v1,#bad
+                                    'bothv2': confidence_and_exploitation_v2,
+                                    'similarity': similarity_search}
 
         assert method in self.acquisition_method.keys(), f"Specified 'method' not available. " \
                                                          f"Select from: {self.acquisition_method.keys()}"
@@ -138,15 +144,52 @@ def mc_mutual_information(logits_N_K_C: Tensor) -> Tensor:#CHANGE AFTER TESTING
     mutual_info = entropy_mean - mean_entropy  # [N]
 
     return mutual_info
-
-def greedy_exploitation(logits_N_K_C: Tensor, smiles: np.ndarray[str], n: int = 1, **kwargs) -> np.ndarray[str]:
-    """ Get the n highest predicted samples """
-
-    mean_probs_hits = torch.mean(torch.exp(logits_N_K_C), dim=1)[:, 1]
-    picks_idx = torch.argsort(mean_probs_hits, descending=True)[:n]
+def high_confidence_consensus_sum_1(logits_N_K_C: Tensor, smiles: np.ndarray[str], n: int = 1, **kwargs) -> np.ndarray[str]:
+    picks = logits_N_K_C[:,:,1].sum(dim=1)
+    picks_idx = torch.argsort(picks, descending=True)[:n] #cuts to len n
 
     return np.array([smiles[picks_idx.cpu()]]) if n == 1 else smiles[picks_idx.cpu()]
 
+def high_confidence_consensus_sum_0(logits_N_K_C: Tensor, smiles: np.ndarray[str], n: int = 1, **kwargs) -> np.ndarray[str]:
+    picks = logits_N_K_C[:,:,0].sum(dim=1)
+    picks_idx = torch.argsort(picks, descending=True)[:n] #cuts to len n
+
+    return np.array([smiles[picks_idx.cpu()]]) if n == 1 else smiles[picks_idx.cpu()]
+
+def high_confidence_consensus_prod_1(logits_N_K_C: Tensor, smiles: np.ndarray[str], n: int = 1, **kwargs) -> np.ndarray[str]:
+    picks = logits_N_K_C[:,:,1].prod(dim=1)
+    picks_idx = torch.argsort(picks, descending=True)[:n] #cuts to len n
+
+    return np.array([smiles[picks_idx.cpu()]]) if n == 1 else smiles[picks_idx.cpu()]
+
+def high_confidence_consensus_prod_0(logits_N_K_C: Tensor, smiles: np.ndarray[str], n: int = 1, **kwargs) -> np.ndarray[str]:
+    picks = logits_N_K_C[:,:,1].prod(dim=1)
+    picks_idx = torch.argsort(picks, descending=True)[:n] #cuts to len n
+
+    return np.array([smiles[picks_idx.cpu()]]) if n == 1 else smiles[picks_idx.cpu()]
+
+def greedy_exploitation(logits_N_K_C: Tensor, smiles: np.ndarray[str], n: int = 1, **kwargs) -> np.ndarray[str]:
+    """ Get the n highest predicted samples """
+    
+    #must be 99936*10*2
+    mean_probs_hits = torch.mean(torch.exp(logits_N_K_C), dim=1)[:, 1] #tensor of len 1
+    picks_idx = torch.argsort(mean_probs_hits, descending=True)[:n] #cuts to len n
+
+    return np.array([smiles[picks_idx.cpu()]]) if n == 1 else smiles[picks_idx.cpu()]
+
+def confidence_and_exploitation_v1(logits_N_K_C: Tensor, smiles: np.ndarray[str], n: int = 1, **kwargs) -> np.ndarray[str]:
+    mean_probs_hits = torch.mean(torch.exp(logits_N_K_C), dim=1)[:, 1]
+    entropy_mean_N = mean_sample_entropy(logits_N_K_C)
+    result = mean_probs_hits * entropy_mean_N
+    picks_idx = torch.argsort(result, descending=True)[:n]  # cuts to len n
+    return np.array([smiles[picks_idx.cpu()]]) if n == 1 else smiles[picks_idx.cpu()]
+
+def confidence_and_exploitation_v2(logits_N_K_C: Tensor, smiles: np.ndarray[str], n: int = 1, **kwargs) -> np.ndarray[str]:
+    mean_probs_hits = torch.mean(torch.exp(logits_N_K_C), dim=1)[:, 1]
+    entropy_mean_N = mean_sample_entropy(logits_N_K_C)
+    result = mean_probs_hits * (entropy_mean_N **-1)
+    picks_idx = torch.argsort(result, descending=True)[:n]  # cuts to len n
+    return np.array([smiles[picks_idx.cpu()]]) if n == 1 else smiles[picks_idx.cpu()]
 
 def greedy_exploration(logits_N_K_C: Tensor, smiles: np.ndarray[str], n: int = 1, **kwargs) -> np.ndarray[str]:
     """ Get the n most samples with the most variance in hit classification """
@@ -205,36 +248,36 @@ def dynamic_exploration_mc_bald(logits_N_K_C: Tensor, smiles: np.ndarray[str], n
 
 def bald(logits_N_K_C: Tensor, smiles: np.ndarray[str], n: int = 1, **kwargs) -> np.ndarray[str]:
     """ Get the n molecules with the lowest Mutual Information """
-    I = mutual_information(logits_N_K_C)
+    I = mutual_information(logits_N_K_C)#shape is 143,
     picks_idx = torch.argsort(I, descending=False)[:n]
 
     return smiles[picks_idx.cpu()]
 def mc_bald(logits_N_K_C: Tensor, smiles: np.ndarray[str], n: int = 1, **kwargs) -> np.ndarray[str]:
-    """ Get the n molecules with the lowest Mutual Information """
-    I = mc_mutual_information(logits_N_K_C)
-    picks_idx = torch.argsort(I, descending=False)[:n]
+     """ Get the n molecules with the lowest Mutual Information """
+     I = mc_mutual_information(logits_N_K_C)
+     picks_idx = torch.argsort(I, descending=False)[:n]
 
-    return smiles[picks_idx.cpu()]
-'''def mc_bald(logits_N_K_C: Tensor, smiles: np.ndarray[str], n: int = 1, **kwargs) -> np.ndarray[str]:
-    print("logits_N_K_C shape:", logits_N_K_C.shape)  # [N, K, C]
+     return smiles[picks_idx.cpu()]
+# def mc_bald(logits_N_K_C: Tensor, smiles: np.ndarray[str], n: int = 1, **kwargs) -> np.ndarray[str]:
+#     print("logits_N_K_C shape:", logits_N_K_C.shape)  # [N, K, C]
+     #does not work, scan be fixed with shapes
+#     from torch.nn import functional as F
+#     mc_probs = F.softmax(logits_N_K_C, dim=2)
+#     print("mc_probs shape (after softmax):", mc_probs.shape)  # [N, K, C]
+#     #mc_probs shape is 143, 10 2
+#     mean_pr = torch.mean(mc_probs, axis=0)
+#     print("mean_pr shape (mean over N):", mean_pr.shape)  # [K, C]
 
-    from torch.nn import functional as F
-    mc_probs = F.softmax(logits_N_K_C, dim=2)
-    print("mc_probs shape (after softmax):", mc_probs.shape)  # [N, K, C]
+#     mean_entropy = -torch.sum(mc_probs * torch.log(mc_probs + 1e-12), axis=1)
+#     print("mean_entropy shape (per sample entropy):", mean_entropy.shape)  # [N, C]
 
-    mean_pr = torch.mean(mc_probs, axis=0)
-    print("mean_pr shape (mean over N):", mean_pr.shape)  # [K, C]
+#     exp_entropy = -torch.mean(torch.sum(mc_probs * torch.log(mc_probs + 1e-11), axis=2), axis=0)
+#     print("exp_entropy shape:", exp_entropy.shape)  # [C]
+#     #shape mean 143, 2 exp 10,
+#     result = mean_entropy - exp_entropy
+#     print("result shape (mean_entropy - exp_entropy):", result.shape)
 
-    mean_entropy = -torch.sum(mc_probs * torch.log(mc_probs + 1e-12), axis=1)
-    print("mean_entropy shape (per sample entropy):", mean_entropy.shape)  # [N, C]
-
-    exp_entropy = -torch.mean(torch.sum(mc_probs * torch.log(mc_probs + 1e-11), axis=2), axis=0)
-    print("exp_entropy shape:", exp_entropy.shape)  # [C]
-
-    result = mean_entropy - exp_entropy
-    print("result shape (mean_entropy - exp_entropy):", result.shape)
-
-    return result'''
+#     return result
  
 def similarity_search(hits: np.ndarray[str], smiles: np.ndarray[str], n: int = 1, radius: int = 2, nBits: int = 1024,
                       **kwargs) -> np.ndarray[str]:
