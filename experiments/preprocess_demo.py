@@ -2,11 +2,12 @@ import os
 import sys
 import warnings
 import pandas as pd
-from active_learning.data_prep import MasterDataset, load_hdf5, get_data, split_data, similarity_vectors
-from config import ROOT_DIR
-sys.path.append('../active_learning')
 
+
+sys.path.append('../active_learning')
+from config import ROOT_DIR
 warnings.simplefilter(action='ignore', category=FutureWarning)
+from active_learning.data_prep import MasterDataset, load_hdf5, get_data, split_data, similarity_vectors
 
 if __name__ == '__main__':
 

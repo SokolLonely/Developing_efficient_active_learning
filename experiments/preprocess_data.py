@@ -1,5 +1,7 @@
 
 import os
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import warnings
 from collections import Counter
 import torch
@@ -21,14 +23,14 @@ if __name__ == '__main__':
 
         MasterDataset(name='screen', df=df_screen, overwrite=True, dataset=dataset)
         MasterDataset(name='test', df=df_test, overwrite=True, dataset=dataset)
-
+        print('Master datasets done')
         df_screen = pd.read_csv(os.path.join(ROOT_DIR, f'data/{dataset}/original/screen.csv'))
         df_test = pd.read_csv(os.path.join(ROOT_DIR, f'data/{dataset}/original/test.csv'))
 
         similarity_vectors(df_screen, df_test, dataset=dataset)
 
     # Perform clustering for each dataset
-    for dataset, tani_cutoffs in zip(['PKM2', 'VDR', 'ALDH1'], [[0.80, 0.61], [0.80, 0.70], [0.80, 0.60]]):
+    for dataset, tani_cutoffs in zip(['ALDH1'], [[0.80, 0.61], [0.80, 0.70], [0.80, 0.60]]): #'PKM2', 'VDR', 
         ds_screen = MasterDataset('screen', representation='ecfp', dataset=dataset)
         x_screen, y_screen, smiles_screen = ds_screen.all()
         smiles_index = torch.load(f'data/{dataset}/screen/smiles_index')

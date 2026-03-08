@@ -12,7 +12,7 @@ import itertools
 from operator import itemgetter
 import numpy as np
 import torch
-from tqdm.auto import tqdm
+#from tqdm.auto import tqdm
 from sklearn.metrics import balanced_accuracy_score
 from active_learning.hyperparameters import MLP_hypers, GCN_hypers
 from active_learning.utils import to_torch_dataloader
@@ -32,7 +32,7 @@ def optimize_hyperparameters(x: np.ndarray, y: np.ndarray, class_weights=None, n
 
     all_hypers = [dict(zip(hypers.keys(), v)) for v in itertools.product(*hypers.values())]
     score_hypers = []
-    for hyper in tqdm(all_hypers):
+    for hyper in all_hypers:
         hyper['ensemble_size'] = 1
         score = k_fold_cross_validation(x, y, n_folds=n_folds, seed=42, architecture=architecture, verbose=True,
                                         class_weights=class_weights, **hyper)

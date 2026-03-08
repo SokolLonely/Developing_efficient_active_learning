@@ -21,11 +21,14 @@ from torch.nn import functional as F
 from torch_geometric.nn import GCNConv, global_add_pool, BatchNorm, GATConv, GINConv
 from tqdm.auto import trange
 from sklearn.ensemble import RandomForestClassifier
+import datamol as dm
 from active_learning.hyperopt import optimize_hyperparameters
-
-
-class MLP(torch.nn.Module):
-    def __init__(self, in_feats: int = 1024, n_hidden: int = 1024, n_out: int = 2, n_layers: int = 3, seed: int = 42,
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
+from sklearn.metrics import accuracy_score
+from transformers import DataCollatorWithPadding
+import pandas as pd
+class NewMLP(torch.nn.Module): #4 layers, 2 times bigger, gelu
+    def __init__(self, in_feats: int = 1024, n_hidden: int = 1024, n_out: int = 2, n_layers: int = 4, seed: int = 42,
                  lr: float = 3e-4, epochs: int = 50, anchored: bool = True, l2_lambda: float = 3e-4,
                  weight_decay: float = 0):
         super().__init__()
@@ -50,7 +53,78 @@ class MLP(torch.nn.Module):
         for lin, norm in zip(self.fc, self.fc_norms):
             x = lin(x)
             x = norm(x)
-            x = F.relu(x)
+            x = F.gelu(x)
+
+        x = self.out(x)
+        x = F.log_softmax(x, 1)
+
+        return x
+class SmilesMLP(torch.nn.Module): 
+    def __init__(self, in_feats: int = 1024, n_hidden: int = 2048, n_out: int = 2, n_layers: int = 4, seed: int = 42,
+                 lr: float = 3e-4, epochs: int = 50, anchored: bool = True, l2_lambda: float = 3e-4,
+                 weight_decay: float = 0):
+        super().__init__()
+        self.seed, self.lr, self.l2_lambda, self.epochs, self.anchored = seed, lr, l2_lambda, epochs, anchored
+        self.weight_decay = weight_decay
+        torch.manual_seed(seed)
+
+        self.fc = torch.nn.ModuleList()
+        self.fc_norms = torch.nn.ModuleList()
+        for i in range(n_layers):
+            self.fc.append(torch.nn.Linear(in_feats if i == 0 else n_hidden, n_hidden))
+            self.fc_norms.append(BatchNorm(n_hidden, allow_single_element=True))
+        self.out = torch.nn.Linear(n_hidden, n_out)
+
+    def reset_parameters(self):
+        for lin, norm in zip(self.fc, self.fc_norms):
+            lin.reset_parameters()
+            norm.reset_parameters()
+        self.out.reset_parameters()
+
+    def forward(self, x: Tensor) -> Tensor:
+        for lin, norm in zip(self.fc, self.fc_norms):
+            x = lin(x)
+            x = norm(x)
+            x = F.gelu(x)
+
+        x = self.out(x)
+        x = F.log_softmax(x, 1)
+
+        return x
+class MLP(torch.nn.Module):
+    def __init__(self, in_feats: int = 1024, n_hidden: int = 1024,function = 'relu', n_out: int = 2, n_layers: int = 3, seed: int = 42,
+                 lr: float = 3e-4, epochs: int = 50, anchored: bool = True, l2_lambda: float = 3e-4,
+                 weight_decay: float = 0):
+        super().__init__()
+        self.seed, self.lr, self.l2_lambda, self.epochs, self.anchored = seed, lr, l2_lambda, epochs, anchored
+        self.weight_decay = weight_decay
+        torch.manual_seed(seed)
+        if function == 'relu':
+            self.func = F.relu
+        elif function == 'gelu':
+            self.func = F.gelu
+        elif function == 'tanh':
+            self.func = F.tanh
+        elif function == 'leakyrelu':
+            self.func = F.leaky_relu
+        self.fc = torch.nn.ModuleList()
+        self.fc_norms = torch.nn.ModuleList()
+        for i in range(n_layers):
+            self.fc.append(torch.nn.Linear(in_feats if i == 0 else n_hidden, n_hidden))
+            self.fc_norms.append(BatchNorm(n_hidden, allow_single_element=True))
+        self.out = torch.nn.Linear(n_hidden, n_out)
+
+    def reset_parameters(self):
+        for lin, norm in zip(self.fc, self.fc_norms):
+            lin.reset_parameters()
+            norm.reset_parameters()
+        self.out.reset_parameters()
+
+    def forward(self, x: Tensor) -> Tensor:
+        for lin, norm in zip(self.fc, self.fc_norms):
+            x = lin(x)
+            x = norm(x)
+            x = self.func(x)
 
         x = self.out(x)
         x = F.log_softmax(x, 1)
@@ -117,7 +191,7 @@ class GCN(torch.nn.Module):
         return x
 
 
-class GAT(torch.nn.Module):
+class GAT(torch.nn.Module):#AFTER  DONE TESTING, CHANGE EPOCHS BACK TO 50
     def __init__(self, in_feats: int = 130, n_hidden: int = 1024, num_conv_layers: int = 3, lr: float = 3e-4,
                  epochs: int = 50, n_out: int = 2, n_layers: int = 3, seed: int = 42, anchored: bool = True,
                  l2_lambda: float = 3e-4, weight_decay: float = 0):
@@ -240,52 +314,106 @@ class GIN(torch.nn.Module):
         x = F.log_softmax(x, 1)
 
         return x
-
-
-class Model(torch.nn.Module):
-    def __init__(self, architecture: str, **kwargs):
+class Chemberta(torch.nn.Module):
+    def __init__(self, model_name: str = "DeepChem/ChemBERTa-77M-MLM", epochs = 50, seed = 42, weight_decay = 0.01, **kwargs):
         super().__init__()
-        assert architecture in ['gcn', 'mlp', 'gat', 'gin']
+        self.model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=2)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self.epochs = epochs
+        self.seed = seed
+        self.weight_decay = weight_decay
+        self.data_collator = DataCollatorWithPadding(tokenizer=self.tokenizer)    # def train(self):
+    def compute_metrics(self, eval_pred):
+                logits, labels = eval_pred
+                predictions = np.argmax(logits, axis=1)
+                acc = accuracy_score(labels, predictions)
+                return {"accuracy": acc}
+class EarlyStopping:
+    def __init__(self, patience=3, min_delta=0):
+        self.patience = patience
+        self.min_delta = min_delta
+        self.counter = 0
+        self.best_loss = float('inf')
+        self.early_stop = False
+
+    def __call__(self, val_loss):
+        if val_loss < self.best_loss - self.min_delta:
+            self.best_loss = val_loss
+            self.counter = 0
+            print(f'best loss= {self.best_loss}')
+        else:
+            self.counter += 1
+            print(f"{val_loss}> {self.best_loss - self.min_delta}")
+            if self.counter >= self.patience:
+                self.early_stop = True
+from transformers import TrainingArguments, Trainer
+class Model(torch.nn.Module):
+    def __init__(self, architecture: str,n_layers=3, function = 'relu', epochs = 50, **kwargs):
+        super().__init__()
+        assert architecture in ['gcn', 'mlp', 'gat', 'gin', 'newmlp', 'chembert']
         self.architecture = architecture
         if architecture == 'mlp':
-            self.model = MLP(**kwargs)
+            self.model = MLP(n_layers = n_layers, function = function, epochs = epochs, **kwargs)
         elif architecture == 'gcn':
-            self.model = GCN(**kwargs)
+            self.model = GCN( **kwargs)
         elif architecture == 'gin':
             self.model = GIN(**kwargs)
+        elif architecture == 'newmlp':
+            self.model = NewMLP(**kwargs)
+        elif architecture == 'chembert':
+            self.model =Chemberta(**kwargs)
         else:
             self.model = GAT(**kwargs)
+
+        #only for chemberta
+        self.training_args = TrainingArguments(
+        output_dir="./chemberta-finetuned",
+        eval_strategy="epoch",
+        save_strategy="epoch",
+        logging_strategy="epoch",
+        learning_rate=2e-5,
+        per_device_train_batch_size=16,
+        per_device_eval_batch_size=16,
+        num_train_epochs=epochs,
+        weight_decay=self.model.weight_decay,
+        load_best_model_at_end = True,
+        #compute_metrics=compute_metrics,
+        metric_for_best_model="accuracy",
+        report_to="none",
+        )
 
         self.device_type = "cuda" if torch.cuda.is_available() else "cpu"
         self.device = torch.device(self.device_type)
         self.loss_fn = torch.nn.NLLLoss()
-
+        if self.architecture != 'chembert':
         # Move the whole model to the gpu
-        self.model = self.model.to(self.device)
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.model.lr,
+            self.model = self.model.to(self.device)
+            self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.model.lr,
                                           weight_decay=self.model.weight_decay)
-
         # Save initial weights in the model for the anchored regularization and move them to the gpu
-        if self.model.anchored:
-            self.model.anchor_weights = deepcopy({i: j for i, j in self.model.named_parameters()})
-            self.model.anchor_weights = {i: j.to(self.device) for i, j in self.model.anchor_weights.items()}
+            if self.model.anchored:
+                self.model.anchor_weights = deepcopy({i: j for i, j in self.model.named_parameters()})
+                self.model.anchor_weights = {i: j.to(self.device) for i, j in self.model.anchor_weights.items()}
 
         self.train_loss = []
         self.epochs, self.epoch = self.model.epochs, 0
 
     def train(self, dataloader: DataLoader, epochs: int = None, verbose: bool = True) -> None:
-
+      if self.architecture != 'chembert':
         bar = trange(self.epochs if epochs is None else epochs, disable=not verbose)
         scaler = torch.cuda.amp.GradScaler()
-
-        for _ in bar:
+        print()
+        from torch.optim.lr_scheduler import ReduceLROnPlateau
+        #scheduler = ReduceLROnPlateau(self.optimizer, mode='min', patience=3, factor=0.5)
+        early_stopping = EarlyStopping(patience=6, min_delta=0)
+        for i in bar:#epoch loop 
             running_loss = 0
             items = 0
-
+            print(i, end = ' ')
             for idx, batch in enumerate(dataloader):
 
                 self.optimizer.zero_grad()
-
+                
                 with torch.autocast(device_type=self.device_type, dtype=torch.bfloat16):
 
                     if self.architecture in ['gcn', 'gat', 'gin']:
@@ -312,12 +440,12 @@ class Model(torch.nn.Module):
                         # Add anchored loss to regular loss according to Pearce et al. (2018)
                         loss = loss + l2_loss
 
-                    scaler.scale(loss).backward()
+                    #scaler.scale(loss).backward()
                     # loss.backward()
-                    scaler.step(self.optimizer)
+                    #scaler.step(self.optimizer)
                     # self.optimizer.step()
-                    scaler.update()
-
+                    #scaler.update()
+                    #scheduler.step(loss)
                     running_loss += loss.item()
                     items += len(y)
 
@@ -325,13 +453,32 @@ class Model(torch.nn.Module):
             bar.set_postfix(loss=f'{epoch_loss:.4f}')
             self.train_loss.append(epoch_loss)
             self.epoch += 1
-
-    def predict(self, dataloader: DataLoader) -> Tensor:
-        """ Predict
-
+            early_stopping(epoch_loss)
+            if early_stopping.early_stop:
+               print("Early stopping triggered")
+               break
+        
+      else:
+            
+            trainer = Trainer(
+                model=self.model.model,
+                args=self.training_args,
+                train_dataset=dataloader,
+                eval_dataset=dataloader,
+                tokenizer=self.model.tokenizer,
+                compute_metrics=self.model.compute_metrics,
+                data_collator=self.model.data_collator,
+    #compute_metrics=compute_metrics
+                    )
+            print(type(dataloader))
+            trainer.train()
+      print('train function finished')
+    def predict(self, dataloader: DataLoader, architecture) -> Tensor:
+      """ Predict
         :param dataloader: Torch geometric data loader with data
         :return: A 1D-tensors
         """
+      if architecture != 'chembert':
         y_hats = torch.tensor([]).to(self.device)
         with torch.no_grad():
             with torch.autocast(device_type=self.device_type, dtype=torch.bfloat16):
@@ -347,17 +494,35 @@ class Model(torch.nn.Module):
                     y_hats = torch.cat((y_hats, y_hat), 0)
 
         return y_hats
+      else:
+          trainer = Trainer(
+                model=self.model.model,
+                args=self.training_args,
+                train_dataset=dataloader,
+                eval_dataset=dataloader,
+                tokenizer=self.model.tokenizer,
+                compute_metrics=self.model.compute_metrics,
+                data_collator=self.model.data_collator,
+    #compute_metrics=compute_metrics
+                    )
+          results = trainer.predict(dataloader)
+          return results
 
 
+           
 class Ensemble(torch.nn.Module):
     """ Ensemble of GCNs"""
-    def __init__(self, ensemble_size: int = 10, seed: int = 0, architecture: str = 'mlp', **kwargs) -> None:
+    def __init__(self, ensemble_size: int = 10, seed: int = 0,n_layers =3, function = 'relu',epochs = 50, architecture: str = 'mlp', **kwargs) -> None:
         self.ensemble_size = ensemble_size
+        if architecture == 'chembert':
+            self.ensemble_size = 1
         self.architecture = architecture
         self.seed = seed
+        self.epochs = epochs
+        self.n_layers = n_layers
         rng = np.random.default_rng(seed=seed)
         self.seeds = rng.integers(0, 1000, ensemble_size)
-        self.models = {i: Model(seed=s, architecture=architecture, **kwargs) for i, s in enumerate(self.seeds)}
+        self.models = {i: Model(seed=s, architecture=architecture, n_layers =n_layers, epochs = epochs, function = function, **kwargs) for i, s in enumerate(self.seeds)}
 
     def optimize_hyperparameters(self, x, y: DataLoader, **kwargs):
         # raise NotImplementedError
@@ -369,11 +534,23 @@ class Ensemble(torch.nn.Module):
         for i, m in self.models.items():
             m.train(dataloader, **kwargs)
 
-    def predict(self, dataloader, **kwargs) -> Tensor:
-        """ logits_N_K_C = [N, num_inference_samples, num_classes] """
-        logits_N_K_C = torch.stack([m.predict(dataloader) for m in self.models.values()], 1)
-
-        return logits_N_K_C
+    def predict(self, dataloader, architecture, **kwargs) -> Tensor:
+       # """ logits_N_K_C = [N, num_inference_samples, num_classes] """
+       # if architecture != 'chembert':
+            raw_logits_N_K_C = [m.predict(dataloader, architecture) for m in self.models.values()]
+            if architecture != 'chembert':
+                logits_N_K_C = torch.stack(raw_logits_N_K_C, 1)  # [N, num_inference_samples, num_classes]
+                return logits_N_K_C
+            else:
+                arrays = []
+                for el in raw_logits_N_K_C:
+                    arrays.append( el.predictions)
+                    #print(prediction.shape)
+                result = np.stack(arrays)
+                #all_preds = all_preds[np.newaxis, ...]
+                return torch.tensor(result, dtype=torch.float32)
+       # else:
+           # return self.models.values()[0].predict(dataloader, architecture)
 
     def __getitem__(self, item):
         return self.models[item]

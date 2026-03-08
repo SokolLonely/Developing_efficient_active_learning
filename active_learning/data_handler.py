@@ -21,9 +21,9 @@ class Handler:
         assert bias in ['random', 'small', 'large'], "'bias' has to be either 'random', 'small', or 'large'"
         assert n_start <= 64 or bias == 'random', 'Number of starting molecules has to be <= 64'
 
-        self.index_smiles = torch.load(os.path.join(ROOT_DIR, 'data', dataset, 'screen', 'index_smiles'))
-        self.smiles_index = torch.load(os.path.join(ROOT_DIR, 'data', dataset, 'screen', 'smiles_index'))
-        self.all_y = torch.load(os.path.join(ROOT_DIR, 'data', dataset, 'screen', 'y'))
+        self.index_smiles = torch.load(os.path.join(ROOT_DIR, 'data', dataset, 'screen', 'index_smiles'), weights_only=False)
+        self.smiles_index = torch.load(os.path.join(ROOT_DIR, 'data', dataset, 'screen', 'smiles_index'), weights_only=False)
+        self.all_y = torch.load(os.path.join(ROOT_DIR, 'data', dataset, 'screen', 'y'), weights_only=False)
 
         self.dataset = dataset
         self.selected_start_cluster = None

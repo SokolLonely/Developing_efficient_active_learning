@@ -10,9 +10,11 @@ from rdkit.Chem.Scaffolds import MurckoScaffold
 from tqdm import tqdm
 import torch
 import h5py
+import transformers
 from config import ROOT_DIR
+
 from active_learning.utils import molecular_graph_featurizer as smiles_to_graph, scramble_features, smiles_to_ecfp, \
-    get_tanimoto_matrix, check_featurizability, scramble_graphs
+    get_tanimoto_matrix, check_featurizability, scramble_graphs, smiles_to_rdkit_mol, rdkit_mol_to_ase, smiles_to_acsf, smiles_to_soap
 
 
 def canonicalize(smiles: str, sanitize: bool = True):
@@ -59,7 +61,7 @@ def get_data(random_state: int = 42, dataset: str = 'ALDH1'):
 
     # shuffle
     df = df.sample(frac=1, random_state=random_state).reset_index(drop=True)
-
+    print('get_data complete')
     return df
 
 
@@ -73,7 +75,7 @@ def split_data(df: pd.DataFrame, random_state: int = 42, screen_size: int = 5000
     # write to csv
     df_screen.to_csv(os.path.join(ROOT_DIR, f'data/{dataset}/original/screen.csv'), index=False)
     df_test.to_csv(os.path.join(ROOT_DIR, f'data/{dataset}/original/test.csv'), index=False)
-
+    print('split_data complete')
     return df_screen, df_test
 
 
@@ -82,13 +84,12 @@ class MasterDataset:
     def __init__(self, name: str, df: pd.DataFrame = None, dataset: str = 'ALDH1', representation: str = 'ecfp', root: str = 'data',
                  overwrite: bool = False, scramble_x: bool = False, scramble_x_seed: int = 1) -> None:
 
-        assert representation in ['ecfp', 'graph'], f"'representation' must be 'ecfp' or 'graph', not {representation}"
+        assert representation in ['ecfp', 'graph', 'smiles'], f"'representation' must be 'ecfp' or 'graph', not {representation}"
         self.representation = representation
         self.pth = os.path.join(ROOT_DIR, root, dataset, name)
-
+        print(self.pth)
         # If not done already, process all data. Else just load it
         if not os.path.exists(self.pth) or overwrite:
-            assert df is not None, "You need to supply a dataframe with 'smiles' and 'y' values"
             os.makedirs(os.path.join(root, dataset, name), exist_ok=True)
             self.process(df)
             self.smiles_index, self.index_smiles, self.smiles, self.x, self.y, self.graphs = self.load()
@@ -100,6 +101,9 @@ class MasterDataset:
                 self.x = scramble_features(self.x, seed=scramble_x_seed)
             if representation == 'graph':
                 self.graphs = scramble_graphs(self.graphs, seed=scramble_x_seed)
+        print('init done')
+
+
 
     def process(self, df: pd.DataFrame) -> None:
 
@@ -110,6 +114,11 @@ class MasterDataset:
         smiles = np.array(df.smiles.tolist())
         x = smiles_to_ecfp(smiles, silent=False)
         y = torch.tensor(df.y.tolist())
+        print('new part started') 
+        x_soap = smiles_to_soap(smiles)
+        print('soaps done')
+        x_acsf = smiles_to_acsf(smiles)
+        print('new part finished')
         graphs = [smiles_to_graph(smi, y=y.type(torch.LongTensor)) for smi, y in tqdm(zip(smiles, y))]
 
         torch.save(index_smiles, os.path.join(self.pth, 'index_smiles'))
@@ -118,18 +127,18 @@ class MasterDataset:
         torch.save(x, os.path.join(self.pth, 'x'))
         torch.save(y, os.path.join(self.pth, 'y'))
         torch.save(graphs, os.path.join(self.pth, 'graphs'))
-
+        print('processing done')
     def load(self) -> (dict, dict, np.ndarray, np.ndarray, np.ndarray, list):
 
         print('Loading data ... ', flush=True, file=sys.stderr)
 
-        index_smiles = torch.load(os.path.join(self.pth, 'index_smiles'))
-        smiles_index = torch.load(os.path.join(self.pth, 'smiles_index'))
-        smiles = torch.load(os.path.join(self.pth, 'smiles'))
-        x = torch.load(os.path.join(self.pth, 'x'))
-        y = torch.load(os.path.join(self.pth, 'y'))
-        graphs = torch.load(os.path.join(self.pth, 'graphs'))
-
+        index_smiles = torch.load(os.path.join(self.pth, 'index_smiles'), weights_only=False)
+        smiles_index = torch.load(os.path.join(self.pth, 'smiles_index'), weights_only=False)
+        smiles = torch.load(os.path.join(self.pth, 'smiles',), weights_only=False)
+        x = torch.load(os.path.join(self.pth, 'x'), weights_only=False)
+        y = torch.load(os.path.join(self.pth, 'y'), weights_only=False)
+        graphs = torch.load(os.path.join(self.pth, 'graphs'), weights_only=False)
+        print('loading done')
         return smiles_index, index_smiles, smiles, x, y, graphs
 
     def __len__(self) -> int:
@@ -137,14 +146,27 @@ class MasterDataset:
 
     def all(self):
         return self[range(len(self.smiles))]
-
+    def tokenize(self, smiles):#gets smiles[idx]
+        from transformers import AutoTokenizer
+        model_name = "DeepChem/ChemBERTa-77M-MLM"
+        tokenizer = AutoTokenizer.from_pretrained(model_name, num_labels=2)
+        lst = []
+        for el in smiles:
+            res = tokenizer(el, return_tensors="pt")
+            lst.append(res)
+        #print(lst[:10])
+        return lst
     def __getitem__(self, idx):
         if type(idx) is int:
             idx = [idx]
+        #print(f"idx: {idx}, dtype = {type(idx)}")
+        #print(f"smiles: {self.smiles[idx]}")
         if self.representation == 'ecfp':
             return self.x[idx], self.y[idx], self.smiles[idx]
         if self.representation == 'graph':
             return [self.graphs[i] for i in idx], self.y[idx], self.smiles[idx]
+        if self.representation == 'smiles':
+            return self.tokenize(self.smiles[idx]), self.y[idx], self.smiles[idx]
 
 
 def smi_to_scaff(smiles: str, includeChirality: bool = False):

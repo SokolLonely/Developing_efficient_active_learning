@@ -7,11 +7,12 @@ from rdkit import Chem
 from rdkit.Chem import AllChem, DataStructs
 import torch
 from torch import Tensor
-from torch.utils.data import TensorDataset, DataLoader
+from torch.utils.data import IterableDataset, TensorDataset, DataLoader, Dataset
 from torch_geometric.data import Data
 from torch_geometric.loader import DataLoader as pyg_DataLoader
 from sklearn.metrics import balanced_accuracy_score, roc_auc_score, precision_score, recall_score, confusion_matrix
-
+from transformers import AutoTokenizer
+from datasets import Dataset
 
 structural_smarts = {
     # chirality
@@ -332,7 +333,101 @@ def match_patterns(mol, smarts: dict) -> Tensor:
         x[i][atoms] = 1
 
     return x.T
+def get_max_len(df):
+    #outputAcsf = smiles_to_acsf(lst)
+    outputSoap = smiles_to_soap(lst)
+    mx = -1
+    for i in range(len(outputSoap)):
+         x = outputSoap[i].shape[0]
+         mx = max(mx, x)
+    return mx
+def smiles_to_rdkit_mol(smiles: list[str]):
+    """ Get a list of ASE Atoms objects from a list of SMILES strings """
+    from rdkit import Chem
+    from rdkit.Chem import AllChem
+    from ase import Atoms
+    import numpy as np
+    if type(smiles) is str:
+        smiles = [smiles]
+    output = []
+    for s in smiles:
+        mol = Chem.MolFromSmiles(s)
+        mol = Chem.AddHs(mol)
+        AllChem.EmbedMolecule(mol)
+        try:
+            AllChem.MMFFOptimizeMolecule(mol)
+        except:
+            print(f"Error for {s}")
+        output.append(mol)
+    return output
+def rdkit_mol_to_ase(mol: list[Chem.Mol]):
+    """ Convert a RDKit molecule to an ASE Atoms object """
+    from ase import Atoms
+    output = []
+    for s in mol:
+      symbols = [atom.GetSymbol() for atom in s.GetAtoms()]
+      try:
+       conf = s.GetConformer()
+       positions = np.array([
+         list(conf.GetAtomPosition(i)) for i in range(s.GetNumAtoms())
+       ])
+       output.append(Atoms(symbols=symbols, positions=positions))
+      except:
+        print(s)
 
+
+    return output    
+
+def smiles_to_soap(smiles: list[str], rCut=6.0, species=["H", "O","C", "N", "S", "Cl", "Br", 'F', "I", "P"], nMax=8,lMax=6,pad_size = 62,  silent: bool = True, to_array: bool = True):
+    """ Get a Numpy array of SOAPs from a list of SMILES strings """
+    from dscribe.descriptors import SOAP
+    from ase.io import read
+
+    if type(smiles) is str:
+        smiles = [smiles]
+    #convert smiles to rdkit atoms
+    mols = smiles_to_rdkit_mol(smiles)
+    atoms = rdkit_mol_to_ase(mols)
+    # Set up the SOAP descriptor with parameters:
+    # species, rcut, nmax, and lmax
+    soap = SOAP(species=species,r_cut=rCut,n_max=nMax,l_max=lMax)
+    sp = [soap.create(s) for s in tqdm(atoms, disable=silent)]
+    if not to_array:
+        return sp
+
+    output = []
+    for f in sp:
+        #arr = np.zeros((1,))
+        #ConvertToNumpyArray(f, arr)
+        f = np.pad(f, ((0, pad_size - f.shape[0]), (0, 0), ), constant_values=-1)
+        output.append(f)
+
+    return output
+def smiles_to_acsf(smiles: list[str],species=["H", "O","C", "N", "S", "Cl", "Br", 'F', "I", "P"], rCut=6.0,pad_size = 62, silent: bool = True, to_array: bool = True):
+    """ Get a Numpy array of SOAPs from a list of SMILES strings """
+    from dscribe.descriptors import ACSF
+    from ase.io import read
+
+    if type(smiles) is str:
+        smiles = [smiles]
+    #convert smiles to rdkit atoms
+    mols = smiles_to_rdkit_mol(smiles)
+    atoms = rdkit_mol_to_ase(mols)
+    # Set up the SOAP descriptor with parameters:
+    # species, rcut, nmax, and lmax
+    acsf = ACSF(species=species,r_cut=rCut)
+    ac = [acsf.create(s) for s in tqdm(atoms, disable=silent)]
+    if not to_array:
+        return ac
+
+    output = []
+    for f in ac:
+        #arr = np.zeros((1,))
+        #ConvertToNumpyArray(f, arr)
+        f = np.pad(f, ((0, pad_size - f.shape[0]), (0, 0), ), constant_values=-1)
+        output.append(f)
+
+    return output
 
 def smiles_to_ecfp(smiles: list[str], radius: int = 2, nbits: int = 1024, silent: bool = True, to_array: bool = True) \
         -> np.ndarray:
@@ -367,8 +462,11 @@ class Evaluate:
         self.roc_auc = [0]
         self.tn, self.fp, self.fn, self.tp = [0], [0], [0], [0]
 
-    def eval(self, logits_N_K_C: torch.Tensor, y: torch.Tensor):
-
+    def eval(self, logits_N_K_C: torch.Tensor, y: torch.Tensor, architecture):
+        #size_y = logits_N_K_C
+        #logits_N_K_C = logits_N_K_C.reshape(64, 10, 2)
+        if architecture == 'chembert':
+            logits_N_K_C = np.transpose(logits_N_K_C, (1, 0, 2))
         y = y.cpu() if type(y) is torch.Tensor else torch.tensor(y)
         y_hat = torch.mean(torch.exp(logits_N_K_C), dim=1)
         y_hat = y_hat.cpu() if type(y_hat) is torch.Tensor else torch.tensor(y_hat)
@@ -377,9 +475,15 @@ class Evaluate:
         y_hat = y_hat[:, 1]
 
         # calc_binary_accuracy
+        
         acc = torch.sum(y_hat_bin == y) / len(y)
+        # except:
+        #     y_hat_bin = np.transpose(y_hat_bin, (1, 0, 2))
+        #     acc = torch.sum(y_hat_bin == y) / len(y)
+        
         self.binary_accuracy.append(acc.item())
-
+        #print(len(y))
+        #print(len(y_hat_bin))
         # calc_balanced_accuracy
         balanced_acc = balanced_accuracy_score(y, y_hat_bin)
         self.balanced_accuracy.append(balanced_acc)
@@ -541,16 +645,49 @@ def get_tanimoto_matrix(smiles: list[str], radius: int = 2, nBits: int = 1024, v
         m = squareform(m)
 
     return m
+from torch.utils.data import Dataset
+class TokenizedTextDataset(Dataset):
+    def __init__(self, texts, labels, model_name="DeepChem/ChemBERTa-77M-MLM"):
+        tokenizer = AutoTokenizer.from_pretrained(model_name, num_labels=2)
+        texts = [str(t) for t in texts]  # Ensure all texts are strings
+        self.encodings = tokenizer(texts, padding=True, truncation=True, return_tensors='pt')
+        self.labels = labels
+    def __len__(self):
+        return len(self.labels)
+    def __getitem__(self, idx):
+        return {key: val[idx] for key, val in self.encodings.items()}
 
 
-def to_torch_dataloader(x: Union[list, np.ndarray], y: Optional[np.ndarray] = None, **kwargs) -> \
+def to_torch_dataloader(x: Union[list, np.ndarray], y: Optional[np.ndarray] = None, architecture = 'mlp', **kwargs) -> \
         Union[DataLoader, pyg_DataLoader]:
+     if architecture == 'mlp':
+        if type(x) is np.ndarray:
+            assert y is not None, 'No y values provided'
+            try:
+                return DataLoader(TensorDataset(Tensor(x), Tensor(y).unsqueeze(1).type(torch.LongTensor)), **kwargs)
+            except:
+                return DataLoader(TokenizedTextDataset(x, y), **kwargs)
+        else:
+            return pyg_DataLoader(x, **kwargs)
+     else:
+         print('New dataloader started')
+         from datasets import Dataset
+         if not isinstance(x, list):
+          x = x.tolist()
+         for i in range(len(x)):
+             x[i] = str(x[i])
+         print(type(x))
+         tokenizer = AutoTokenizer.from_pretrained('DeepChem/ChemBERTa-77M-MLM')
+         tokenized = tokenizer(x, padding=True, truncation=True, return_tensors="np")
+         data = {
+         "input_ids": tokenized["input_ids"],
+         "attention_mask": tokenized["attention_mask"],
+         "label": y.numpy() if isinstance(y, torch.Tensor) else y
+         }
+         hf_dataset = Dataset.from_dict(data)
+         return hf_dataset
 
-    if type(x) is np.ndarray:
-        assert y is not None, 'No y values provided'
-        return DataLoader(TensorDataset(Tensor(x), Tensor(y).unsqueeze(1).type(torch.LongTensor)), **kwargs)
-    else:
-        return pyg_DataLoader(x, **kwargs)
+
 
 
 def scramble_features(x: np.ndarray, seed: int = 1) -> np.ndarray:

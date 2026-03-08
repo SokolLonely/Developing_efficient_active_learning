@@ -3,10 +3,10 @@ import itertools
 import os
 import argparse
 from tqdm.auto import tqdm
-from active_learning.screening import active_learning
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 sys.path.append('../active_learning')
-
+from active_learning.screening import active_learning
 
 if __name__ == '__main__':
 
@@ -26,7 +26,7 @@ if __name__ == '__main__':
     parser.add_argument('-acq', help="Acquisition function ('random', 'exploration', 'exploitation', 'dynamic', "
                                      "'similarity')", default='random')
     parser.add_argument('-bias', help='The level of bias ("random", "small", "large")', default='random')
-    parser.add_argument('-arch', help='The neural network architecture ("gcn", "mlp")', default='mlp')
+    parser.add_argument('-arch', help='The neural network architecture ("gcn", "mlp")', default='chembert')
     parser.add_argument('-dataset', help='The dataset ("ALDH1", "PKM2", "VDR")', default='DEMO')
     parser.add_argument('-retrain', help='Retrain the model every cycle', default='True')
     parser.add_argument('-batch_size', help='How many molecules we select each cycle', default=64)
@@ -54,6 +54,7 @@ if __name__ == '__main__':
                                   batch_size=experiment['batch_size'],
                                   architecture=experiment['architecture'],
                                   seed=experiment['seed'],
+                                  epochs = 3, #experiment['epochs'],
                                   retrain=experiment['retrain'],
                                   anchored=experiment['anchored'],
                                   dataset=experiment['dataset'],

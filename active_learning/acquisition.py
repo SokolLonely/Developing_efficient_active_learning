@@ -26,6 +26,8 @@ class Acquisition:
                                    'dynamic': dynamic_exploration,
                                    'dynamicbald': dynamic_exploration_bald,
                                    'bald': bald,
+                                   'mc_bald': mc_bald,
+                                   'dynamic_exploration_mc_bald': dynamic_exploration_mc_bald,
                                    'similarity': similarity_search}
 
         assert method in self.acquisition_method.keys(), f"Specified 'method' not available. " \
@@ -92,7 +94,7 @@ def mean_sample_entropy(logits_N_K_C: Tensor, dim: int = -1, keepdim: bool = Fal
     return entropy_mean_N
 
 
-def mutual_information(logits_N_K_C: Tensor) -> Tensor:
+def mutual_information(logits_N_K_C: Tensor) -> Tensor: #formula from the paper
     """ Calculates the Mutual Information - Kirch et al., 2019, NeurIPS """
 
     # this term represents the entropy of the model prediction (high when uncertain)
@@ -104,7 +106,38 @@ def mutual_information(logits_N_K_C: Tensor) -> Tensor:
     I = mean_entropy_N - entropy_mean_N
 
     return I
+def mc_mutual_information(logits_N_K_C: Tensor) -> Tensor:#CHANGE AFTER TESTING
+    """
+    Calculates Mutual Information using Monte Carlo Dropout predictions.
 
+    Args:
+        logits_N_K_C (Tensor): Logits from K stochastic forward passes with shape [N, K, C].
+
+    Returns:
+        Tensor: Mutual Information for each sample in the batch (shape [N]).
+    
+    Reference:
+        "Kirch et al., 2019, NeurIPS"
+    """
+    print('started mc_mutual_information')
+    import torch.nn.functional as F
+    # Step 1: Apply softmax to convert logits to probabilities
+    probs_N_K_C = F.softmax(logits_N_K_C, dim=-1)  # Shape: [N, K, C]
+
+    # Step 2: Calculate mean probability across MC samples (K)
+    mean_probs_N_C = probs_N_K_C.mean(dim=1)  # Shape: [N, C]
+
+    # Step 3: Entropy of the mean predictions: H[ E[p(y|x, w)] ]
+    entropy_mean = -torch.sum(mean_probs_N_C * torch.log(mean_probs_N_C + 1e-8), dim=-1)  # [N]
+
+    # Step 4: Mean of entropy of each prediction: E[ H[p(y|x, w)] ]
+    entropy_each = -torch.sum(probs_N_K_C * torch.log(probs_N_K_C + 1e-8), dim=-1)  # [N, K]
+    mean_entropy = entropy_each.mean(dim=1)  # [N]
+
+    # Step 5: Mutual Information: I = H[ E[p(y|x, w)] ] - E[ H[p(y|x, w)] ]
+    mutual_info = entropy_mean - mean_entropy  # [N]
+
+    return mutual_info
 
 def greedy_exploitation(logits_N_K_C: Tensor, smiles: np.ndarray[str], n: int = 1, **kwargs) -> np.ndarray[str]:
     """ Get the n highest predicted samples """
@@ -146,7 +179,7 @@ def dynamic_exploration_bald(logits_N_K_C: Tensor, smiles: np.ndarray[str], n: i
     """ starts with 100% exploration, approaches the limit of 100% exploitation. The speed in which we stop
     exploring depends on lambda. For example, a lambda of 0.9 will require 44 iterations to reach full exploitation,
     a lambda of 0.5 will get there in only 7 iterations """
-
+    #dynamic_exploration, but uses bald for exploration picks
     exploitation_factor = (1/(lambd ** iteration)) - 1
     n_exploit = round(n * exploitation_factor)
     n_explore = n - n_exploit
@@ -155,17 +188,54 @@ def dynamic_exploration_bald(logits_N_K_C: Tensor, smiles: np.ndarray[str], n: i
     explorative_picks = bald(logits_N_K_C, smiles, n=n_explore)
 
     return np.concatenate((exploitative_picks, explorative_picks))
+def dynamic_exploration_mc_bald(logits_N_K_C: Tensor, smiles: np.ndarray[str], n: int = 1, lambd: float = 0.95,
+                             iteration: int = 0, **kwargs) -> np.ndarray[str]:
+    """ starts with 100% exploration, approaches the limit of 100% exploitation. The speed in which we stop
+    exploring depends on lambda. For example, a lambda of 0.9 will require 44 iterations to reach full exploitation,
+    a lambda of 0.5 will get there in only 7 iterations """
+    #dynamic_exploration, but uses bald for exploration picks
+    exploitation_factor = (1/(lambd ** iteration)) - 1
+    n_exploit = round(n * exploitation_factor)
+    n_explore = n - n_exploit
 
+    exploitative_picks = greedy_exploitation(logits_N_K_C, smiles, n=n_exploit)
+    explorative_picks = mc_bald(logits_N_K_C, smiles, n=n_explore)
+
+    return np.concatenate((exploitative_picks, explorative_picks))
 
 def bald(logits_N_K_C: Tensor, smiles: np.ndarray[str], n: int = 1, **kwargs) -> np.ndarray[str]:
     """ Get the n molecules with the lowest Mutual Information """
     I = mutual_information(logits_N_K_C)
-
     picks_idx = torch.argsort(I, descending=False)[:n]
 
     return smiles[picks_idx.cpu()]
+def mc_bald(logits_N_K_C: Tensor, smiles: np.ndarray[str], n: int = 1, **kwargs) -> np.ndarray[str]:
+    """ Get the n molecules with the lowest Mutual Information """
+    I = mc_mutual_information(logits_N_K_C)
+    picks_idx = torch.argsort(I, descending=False)[:n]
 
+    return smiles[picks_idx.cpu()]
+'''def mc_bald(logits_N_K_C: Tensor, smiles: np.ndarray[str], n: int = 1, **kwargs) -> np.ndarray[str]:
+    print("logits_N_K_C shape:", logits_N_K_C.shape)  # [N, K, C]
 
+    from torch.nn import functional as F
+    mc_probs = F.softmax(logits_N_K_C, dim=2)
+    print("mc_probs shape (after softmax):", mc_probs.shape)  # [N, K, C]
+
+    mean_pr = torch.mean(mc_probs, axis=0)
+    print("mean_pr shape (mean over N):", mean_pr.shape)  # [K, C]
+
+    mean_entropy = -torch.sum(mc_probs * torch.log(mc_probs + 1e-12), axis=1)
+    print("mean_entropy shape (per sample entropy):", mean_entropy.shape)  # [N, C]
+
+    exp_entropy = -torch.mean(torch.sum(mc_probs * torch.log(mc_probs + 1e-11), axis=2), axis=0)
+    print("exp_entropy shape:", exp_entropy.shape)  # [C]
+
+    result = mean_entropy - exp_entropy
+    print("result shape (mean_entropy - exp_entropy):", result.shape)
+
+    return result'''
+ 
 def similarity_search(hits: np.ndarray[str], smiles: np.ndarray[str], n: int = 1, radius: int = 2, nBits: int = 1024,
                       **kwargs) -> np.ndarray[str]:
     """ 1. Compute the similarity of all screen smiles to all hit smiles
