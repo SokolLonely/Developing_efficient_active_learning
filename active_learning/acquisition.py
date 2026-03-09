@@ -4,11 +4,7 @@ This script contains a selection of sample acquisition methods for active learni
 All functions here operate on model predictions in the form of logits_N_K_C = [N, num_inference_samples, num_classes].
 Here N is a molecule, K are the number of sampled predictions (i.e., 10 for a 10-model ensemble), and C = 2 ([0, 1]):
 
-<<<<<<< HEAD
     Author: Simon Ryabinkin, University of Calgary, 2025-2026, modified from Derek van Tilborg, Eindhoven University of Technology, May 2023
-=======
-    Author: Derek van Tilborg, Eindhoven University of Technology, May 2023
->>>>>>> ce45ae89a9ba1ccab1da2b8c4d3949c24cb50b2e
 
 """
 
@@ -30,19 +26,9 @@ class Acquisition:
                                    'dynamic': dynamic_exploration,
                                    'dynamicbald': dynamic_exploration_bald,
                                    'bald': bald,
-<<<<<<< HEAD
-                                   'mc_bald': mc_bald,
-                                   'prod_1': high_confidence_consensus_prod_1,
-                                   'prod_0': high_confidence_consensus_prod_0,#bad
-                                   'sum_1': high_confidence_consensus_sum_1,
-                                   'sum_0': high_confidence_consensus_sum_0,#bad
-                                   'dynamic_exploration_mc_bald': dynamic_exploration_mc_bald,
-                                    'bothv1': confidence_and_exploitation_v1,#bad
-=======
                                    'prod_1': high_confidence_consensus_prod_1,
                                    'sum_1': high_confidence_consensus_sum_1,
                                    'dynamic_exploration_mc_bald': dynamic_exploration_mc_bald,
->>>>>>> ce45ae89a9ba1ccab1da2b8c4d3949c24cb50b2e
                                     'bothv2': confidence_and_exploitation_v2,
                                     'similarity': similarity_search}
 
@@ -110,11 +96,7 @@ def mean_sample_entropy(logits_N_K_C: Tensor, dim: int = -1, keepdim: bool = Fal
     return entropy_mean_N
 
 
-<<<<<<< HEAD
 def mutual_information(logits_N_K_C: Tensor) -> Tensor: #formula from the paper
-=======
-def mutual_information(logits_N_K_C: Tensor) -> Tensor: 
->>>>>>> ce45ae89a9ba1ccab1da2b8c4d3949c24cb50b2e
     """ Calculates the Mutual Information - Kirch et al., 2019, NeurIPS """
 
     # this term represents the entropy of the model prediction (high when uncertain)
@@ -126,7 +108,6 @@ def mutual_information(logits_N_K_C: Tensor) -> Tensor:
     I = mean_entropy_N - entropy_mean_N
 
     return I
-<<<<<<< HEAD
 def mc_mutual_information(logits_N_K_C: Tensor) -> Tensor:#CHANGE AFTER TESTING
     """
     Calculates Mutual Information using Monte Carlo Dropout predictions.
@@ -157,9 +138,6 @@ def mc_mutual_information(logits_N_K_C: Tensor) -> Tensor:#CHANGE AFTER TESTING
 
     # Step 5: Mutual Information: I = H[ E[p(y|x, w)] ] - E[ H[p(y|x, w)] ]
     mutual_info = entropy_mean - mean_entropy  # [N]
-=======
-
->>>>>>> ce45ae89a9ba1ccab1da2b8c4d3949c24cb50b2e
 
     return mutual_info
 def high_confidence_consensus_sum_1(logits_N_K_C: Tensor, smiles: np.ndarray[str], n: int = 1, **kwargs) -> np.ndarray[str]:
@@ -168,13 +146,9 @@ def high_confidence_consensus_sum_1(logits_N_K_C: Tensor, smiles: np.ndarray[str
 
     return np.array([smiles[picks_idx.cpu()]]) if n == 1 else smiles[picks_idx.cpu()]
 
-<<<<<<< HEAD
 def high_confidence_consensus_sum_0(logits_N_K_C: Tensor, smiles: np.ndarray[str], n: int = 1, **kwargs) -> np.ndarray[str]:
     picks = logits_N_K_C[:,:,0].sum(dim=1)
     picks_idx = torch.argsort(picks, descending=True)[:n] #cuts to len n
-=======
-
->>>>>>> ce45ae89a9ba1ccab1da2b8c4d3949c24cb50b2e
 
     return np.array([smiles[picks_idx.cpu()]]) if n == 1 else smiles[picks_idx.cpu()]
 
@@ -184,15 +158,11 @@ def high_confidence_consensus_prod_1(logits_N_K_C: Tensor, smiles: np.ndarray[st
 
     return np.array([smiles[picks_idx.cpu()]]) if n == 1 else smiles[picks_idx.cpu()]
 
-<<<<<<< HEAD
 def high_confidence_consensus_prod_0(logits_N_K_C: Tensor, smiles: np.ndarray[str], n: int = 1, **kwargs) -> np.ndarray[str]:
     picks = logits_N_K_C[:,:,1].prod(dim=1)
     picks_idx = torch.argsort(picks, descending=True)[:n] #cuts to len n
 
     return np.array([smiles[picks_idx.cpu()]]) if n == 1 else smiles[picks_idx.cpu()]
-=======
-
->>>>>>> ce45ae89a9ba1ccab1da2b8c4d3949c24cb50b2e
 
 def greedy_exploitation(logits_N_K_C: Tensor, smiles: np.ndarray[str], n: int = 1, **kwargs) -> np.ndarray[str]:
     """ Get the n highest predicted samples """
@@ -203,16 +173,12 @@ def greedy_exploitation(logits_N_K_C: Tensor, smiles: np.ndarray[str], n: int = 
 
     return np.array([smiles[picks_idx.cpu()]]) if n == 1 else smiles[picks_idx.cpu()]
 
-<<<<<<< HEAD
 def confidence_and_exploitation_v1(logits_N_K_C: Tensor, smiles: np.ndarray[str], n: int = 1, **kwargs) -> np.ndarray[str]:
     mean_probs_hits = torch.mean(torch.exp(logits_N_K_C), dim=1)[:, 1]
     entropy_mean_N = mean_sample_entropy(logits_N_K_C)
     result = mean_probs_hits * entropy_mean_N
     picks_idx = torch.argsort(result, descending=True)[:n]  # cuts to len n
     return np.array([smiles[picks_idx.cpu()]]) if n == 1 else smiles[picks_idx.cpu()]
-=======
-
->>>>>>> ce45ae89a9ba1ccab1da2b8c4d3949c24cb50b2e
 
 def confidence_and_exploitation_v2(logits_N_K_C: Tensor, smiles: np.ndarray[str], n: int = 1, **kwargs) -> np.ndarray[str]:
     mean_probs_hits = torch.mean(torch.exp(logits_N_K_C), dim=1)[:, 1]
@@ -282,16 +248,12 @@ def bald(logits_N_K_C: Tensor, smiles: np.ndarray[str], n: int = 1, **kwargs) ->
     picks_idx = torch.argsort(I, descending=False)[:n]
 
     return smiles[picks_idx.cpu()]
-<<<<<<< HEAD
 def mc_bald(logits_N_K_C: Tensor, smiles: np.ndarray[str], n: int = 1, **kwargs) -> np.ndarray[str]:
      """ Get the n molecules with the lowest Mutual Information """
      I = mc_mutual_information(logits_N_K_C)
      picks_idx = torch.argsort(I, descending=False)[:n]
 
      return smiles[picks_idx.cpu()]
-=======
-
->>>>>>> ce45ae89a9ba1ccab1da2b8c4d3949c24cb50b2e
 # def mc_bald(logits_N_K_C: Tensor, smiles: np.ndarray[str], n: int = 1, **kwargs) -> np.ndarray[str]:
 #     print("logits_N_K_C shape:", logits_N_K_C.shape)  # [N, K, C]
      #does not work, scan be fixed with shapes

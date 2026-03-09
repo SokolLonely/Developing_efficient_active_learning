@@ -8,11 +8,7 @@ This script contains all models:
     - Ensemble: Class that ensembles n Model classes. Contains a train() method and an predict() method that outputs
         logits_N_K_C, defined as [N, num_inference_samples, num_classes]. Also has an optimize_hyperparameters() method.
 
-<<<<<<< HEAD
     Author: Simon Ryabinkin, University of Calgary, 2025-2026, modified from Derek van Tilborg, Eindhoven University of Technology, May 2023
-=======
-    Author: Derek van Tilborg, Eindhoven University of Technology, May 2023
->>>>>>> ce45ae89a9ba1ccab1da2b8c4d3949c24cb50b2e
 
 """
 
@@ -64,42 +60,6 @@ class MLP(torch.nn.Module):
         x = F.log_softmax(x, 1)
 
         return x
-<<<<<<< HEAD
-class SmilesMLP(torch.nn.Module): 
-    def __init__(self, in_feats: int = 1024, n_hidden: int = 2048, n_out: int = 2, n_layers: int = 4, seed: int = 42,
-                 lr: float = 3e-4, epochs: int = 50, anchored: bool = True, l2_lambda: float = 3e-4,
-                 weight_decay: float = 0):
-        super().__init__()
-        self.seed, self.lr, self.l2_lambda, self.epochs, self.anchored = seed, lr, l2_lambda, epochs, anchored
-        self.weight_decay = weight_decay
-        torch.manual_seed(seed)
-
-        self.fc = torch.nn.ModuleList()
-        self.fc_norms = torch.nn.ModuleList()
-        for i in range(n_layers):
-            self.fc.append(torch.nn.Linear(in_feats if i == 0 else n_hidden, n_hidden))
-            self.fc_norms.append(BatchNorm(n_hidden, allow_single_element=True))
-        self.out = torch.nn.Linear(n_hidden, n_out)
-
-    def reset_parameters(self):
-        for lin, norm in zip(self.fc, self.fc_norms):
-            lin.reset_parameters()
-            norm.reset_parameters()
-        self.out.reset_parameters()
-
-    def forward(self, x: Tensor) -> Tensor:
-        for lin, norm in zip(self.fc, self.fc_norms):
-            x = lin(x)
-            x = norm(x)
-            x = F.gelu(x)
-
-        x = self.out(x)
-        x = F.log_softmax(x, 1)
-
-        return x
-=======
-
->>>>>>> ce45ae89a9ba1ccab1da2b8c4d3949c24cb50b2e
 class AttMLP(torch.nn.Module):
     def __init__(self, in_feats: int = 1024, n_hidden: int = 1024,function = 'relu', n_out: int = 2, n_layers: int = 3, seed: int = 42,
                  lr: float = 3e-4, epochs: int = 50, anchored: bool = True, l2_lambda: float = 3e-4,
@@ -203,11 +163,7 @@ class GCN(torch.nn.Module):
         return x
 
 
-<<<<<<< HEAD
-class GAT(torch.nn.Module):#AFTER  DONE TESTING, CHANGE EPOCHS BACK TO 50
-=======
 class GAT(torch.nn.Module):
->>>>>>> ce45ae89a9ba1ccab1da2b8c4d3949c24cb50b2e
     def __init__(self, in_feats: int = 130, n_hidden: int = 1024, num_conv_layers: int = 3, lr: float = 3e-4,
                  epochs: int = 50, n_out: int = 2, n_layers: int = 3, seed: int = 42, anchored: bool = True,
                  l2_lambda: float = 3e-4, weight_decay: float = 0):
@@ -344,7 +300,6 @@ class Chemberta(torch.nn.Module):
                 predictions = np.argmax(logits, axis=1)
                 acc = accuracy_score(labels, predictions)
                 return {"accuracy": acc}
-<<<<<<< HEAD
 class EarlyStopping:
     def __init__(self, patience=3, min_delta=0):
         self.patience = patience
@@ -363,9 +318,6 @@ class EarlyStopping:
             print(f"{val_loss}> {self.best_loss - self.min_delta}")
             if self.counter >= self.patience:
                 self.early_stop = True
-=======
-
->>>>>>> ce45ae89a9ba1ccab1da2b8c4d3949c24cb50b2e
 from transformers import TrainingArguments, Trainer
 class Model(torch.nn.Module):
     def __init__(self, architecture: str, n_hidden, n_layers=3, function = 'relu', epochs = 50, lr = 3e-4, **kwargs):
@@ -457,10 +409,7 @@ class Model(torch.nn.Module):
         print()
         from torch.optim.lr_scheduler import ReduceLROnPlateau
         scheduler = ReduceLROnPlateau(self.optimizer, mode='min', patience=3, factor=0.5)
-<<<<<<< HEAD
-        early_stopping = EarlyStopping(patience=6, min_delta=0)
-=======
->>>>>>> ce45ae89a9ba1ccab1da2b8c4d3949c24cb50b2e
+        #early_stopping = EarlyStopping(patience=6, min_delta=0)
         for i in bar:#epoch loop 
             running_loss = 0
             items = 0
@@ -508,15 +457,7 @@ class Model(torch.nn.Module):
             bar.set_postfix(loss=f'{epoch_loss:.4f}')
             self.train_loss.append(epoch_loss)
             self.epoch += 1
-<<<<<<< HEAD
-            early_stopping(epoch_loss)
-            if early_stopping.early_stop:
-               #print("Early stopping triggered")
-               #break
-               pass
-=======
             
->>>>>>> ce45ae89a9ba1ccab1da2b8c4d3949c24cb50b2e
         
       else:
             

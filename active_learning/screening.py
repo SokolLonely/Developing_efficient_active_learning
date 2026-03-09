@@ -2,11 +2,7 @@
 
 This script contains the main active learning loop that runs all experiments.
 
-<<<<<<< HEAD
     Author: Simon Ryabinkin, University of Calgary, 2025-2026, modified from Derek van Tilborg, Eindhoven University of Technology, May 2023
-=======
-    Author: Derek van Tilborg, Eindhoven University of Technology, May 2023
->>>>>>> ce45ae89a9ba1ccab1da2b8c4d3949c24cb50b2e
 
 """
 
@@ -31,7 +27,7 @@ TRAINING_BATCH_SIZE = 64
 def active_learning(n_start: int = 64, acquisition_method: str = 'exploration', max_screen_size: int = None,
                     batch_size: int = 16,n_layers = 3, n_hidden = 1024,  function = 'relu', epochs = 50, architecture: str = 'gcn', seed: int = 0, bias: str = 'random',
                     optimize_hyperparameters: bool = False, ensemble_size: int = 10, retrain: bool = True,
-                    anchored: bool = True, dataset: str = 'ALDH1', scrambledx: bool = False, corrupt: int = False, lr : float = 3e-4,
+                    anchored: bool = True, dataset: str = 'ALDH1', scrambledx: bool = False, corrupt0: int = 0, corrupt1: int = 0, lr : float = 3e-4,
                     scrambledx_seed: int = 1) -> pd.DataFrame:
 
     # :param n_start: number of molecules to start out with
@@ -85,7 +81,7 @@ def active_learning(n_start: int = 64, acquisition_method: str = 'exploration', 
     
     # Initiate evaluation trackers
     eval_test, eval_screen, eval_train = Evaluate(), Evaluate(), Evaluate()
-    handler = Handler(n_start=n_start, seed=seed, bias=bias, dataset=dataset, corrupt = corrupt)
+    handler = Handler(n_start=n_start, seed=seed, bias=bias, dataset=dataset, corrupt0 = corrupt0, corrupt1 = corrupt1)
 
     # Define some variables
     hits_discovered, total_mols_screened, all_train_smiles = [], [], []
@@ -120,10 +116,7 @@ def active_learning(n_start: int = 64, acquisition_method: str = 'exploration', 
         all_train_smiles.append(';'.join(smiles_train.tolist()))
         temp = sum(y_train).item()
         hits_discovered.append(temp-handler.n_false_labels)
-<<<<<<< HEAD
-=======
         #print(f"hits_discovered: {hits_discovered}")
->>>>>>> ce45ae89a9ba1ccab1da2b8c4d3949c24cb50b2e
         hits = smiles_train[np.where(y_train == 1)] 
         total_mols_screened.append(len(y_train))
 
@@ -149,11 +142,7 @@ def active_learning(n_start: int = 64, acquisition_method: str = 'exploration', 
             screen_loader = to_torch_dataloader(x_screen, y_screen,
                                                 batch_size=INFERENCE_BATCH_SIZE,
                                                 shuffle=False, pin_memory=True, architecture=architecture)
-<<<<<<< HEAD
             
-=======
-            #print(data)
->>>>>>> ce45ae89a9ba1ccab1da2b8c4d3949c24cb50b2e
             # Initiate and train the model (optimize if specified)
             print("Training model")
             if retrain or cycle == 0:
@@ -172,24 +161,6 @@ def active_learning(n_start: int = 64, acquisition_method: str = 'exploration', 
 
             screen_logits_N_K_C = M.predict(screen_loader, architecture)
             eval_screen.eval(screen_logits_N_K_C, y_screen, architecture)
-<<<<<<< HEAD
-
-=======
-        # elif architecture == 'chemberta':
-        #     print('training chembert')
-        #     if retrain or cycle == 0:
-        #         model_name = "deepchem/chemberta-77m-mlm"
-        #         m = chembertmodel() automodel.from_pretrained(model_name, num_labels=2)
-        #     print("train/test/screen inference")
-        #     train_logits_n_k_c = m.predict(train_loader)
-        #     eval_train.eval(train_logits_n_k_c, y_train)
-
-        #     test_logits_n_k_c = m.predict(test_loader)
-        #     eval_test.eval(test_logits_n_k_c, y_test)
-
-        #     screen_logits_n_k_c = m.predict(screen_loader)
-        #     eval_screen.eval(screen_logits_n_k_c, y_screen)
->>>>>>> ce45ae89a9ba1ccab1da2b8c4d3949c24cb50b2e
         else: #random forest
             print("Training model")
             if retrain or cycle == 0:
