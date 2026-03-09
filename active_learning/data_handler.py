@@ -79,7 +79,7 @@ class Handler:
         if self.corrupt0 > 0:
             self.all_y[train_idx],f_p,  n = flip_zeros(self.all_y[train_idx], fraction = self.corrupt0, mode = 0)
         if self.corrupt1 > 0:
-            self.all_y[train_idx],f_p,  n = flip_zeros(self.all_y[train_idx], fraction = self.corrupt1, mode = 0)
+            self.all_y[train_idx],f_p,  n = flip_zeros(self.all_y[train_idx], fraction = self.corrupt1, mode = 1)
         a = sum(self.all_y[train_idx]).item()
         screen_idx = np.array([i for i in range(len(self.all_y)) if i not in train_idx])
         assert len(np.intersect1d(screen_idx, train_idx)) == 0, "Something went wrong selecting train/screen samples"
@@ -107,7 +107,7 @@ def flip_zeros(tensor, fraction=0.01, seed=42, mode = 0):
         if mode == 0:
             mask = (tensor == 0)
         else:
-            ones_mask = (tensor == 1)
+            mask = (tensor == 1)
         nums = mask.sum().item()
         n = max(1, int(fraction * nums))
         zero_indices = mask.nonzero(as_tuple=False)
@@ -116,6 +116,6 @@ def flip_zeros(tensor, fraction=0.01, seed=42, mode = 0):
         if mode == 0:
             tensor[flip_indices] = 1
         else:
-            tensor[flip_indices] = 1
+            tensor[flip_indices] = 0
     
         return tensor, perm, n
